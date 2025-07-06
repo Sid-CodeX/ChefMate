@@ -1,14 +1,20 @@
-const mongoose = require("mongoose");
+// config/db.js
+require("dotenv").config();
+const { Pool } = require("pg");
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URI,
+  ssl: {
+    rejectUnauthorized: false, 
+  },
+});
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
+// Optional test log
+pool.connect()
+  .then(() => console.log(" PostgreSQL Connected"))
+  .catch((err) => {
+    console.error(" PostgreSQL Connection Error:", err);
     process.exit(1);
-  }
-};
+  });
 
-module.exports = connectDB;
+module.exports = pool;

@@ -1,20 +1,29 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const connectDB = require("./config/db");
-
-// Load environment variables
+const morgan = require("morgan");
+const pool = require("./config/db"); 
+const testRoutes = require("./routes/test"); 
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Start server
+// Middleware Configuration
+app.use(express.json());
+app.use(cors());
+app.use(morgan("dev"));
+
+// Routes
+app.use("/api/test", testRoutes);
+
+// Default root route
+app.get("/", (req, res) => {
+  res.send(" Welcome to ChefMate API");
+});
+
+// Start Server
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

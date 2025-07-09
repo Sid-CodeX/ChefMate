@@ -3,8 +3,9 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const morgan = require("morgan");
 const pool = require("./config/db"); 
-const testRoutes = require("./routes/test"); 
 dotenv.config();
+
+const authRoutes = require("./routes/authRoutes"); 
 
 const app = express();
 
@@ -14,7 +15,7 @@ app.use(cors());
 app.use(morgan("dev"));
 
 // Routes
-app.use("/api/test", testRoutes);
+app.use("/api/auth", authRoutes);
 
 // Default root route
 app.get("/", (req, res) => {

@@ -17,11 +17,26 @@ exports.createUser = async ({ name, email, password }) => {
   return result.rows[0];
 };
 
-// Optionally: Get user by ID (for /me route later)
+// Get user by ID (for /me route later)
 exports.findUserById = async (id) => {
   const result = await pool.query(
     `SELECT id, name, email, level, xp FROM users WHERE id = $1`,
     [id]
   );
   return result.rows[0];
+};
+
+exports.updateUserName = async (id, name) => {
+  const result = await pool.query(
+    `UPDATE users SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, name, email, level, xp`,
+    [name, id]
+  );
+  return result.rows[0];
+};
+
+exports.updateUserPassword = async (id, newPassword) => {
+  await pool.query(
+    `UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+    [newPassword, id]
+  );
 };

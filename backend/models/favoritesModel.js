@@ -1,7 +1,6 @@
-// backend/models/favoritesModel.js
 const pool = require("../config/db");
 
-// Get all favorite recipes for a user
+// Fetch all favorite recipes for a user
 exports.getUserFavorites = async (userId) => {
   const result = await pool.query(
     `SELECT r.* FROM favorites f
@@ -12,7 +11,7 @@ exports.getUserFavorites = async (userId) => {
   return result.rows;
 };
 
-// Add a favorite
+// Add a new recipe to user's favorites (ignores duplicates)
 exports.addFavorite = async (userId, recipeId) => {
   await pool.query(
     `INSERT INTO favorites (user_id, recipe_id) VALUES ($1, $2)
@@ -21,7 +20,7 @@ exports.addFavorite = async (userId, recipeId) => {
   );
 };
 
-// Remove a favorite
+// Remove a recipe from user's favorites
 exports.removeFavorite = async (userId, recipeId) => {
   await pool.query(
     `DELETE FROM favorites WHERE user_id = $1 AND recipe_id = $2`,

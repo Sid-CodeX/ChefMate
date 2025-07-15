@@ -35,6 +35,26 @@ const initializeBadgeMetadata = async () => {
   console.log("[BadgeEngine] Badge metadata initialization complete.");
 };
 
+// 🎯 XP to level calculator
+const calculateLevelFromXP = (xp) => {
+  const thresholds = [0, 50, 150, 300, 500, 750, 1050, 1400]; // Levels 1–8
+  let level = 1;
+  for (let i = 1; i < thresholds.length; i++) {
+    if (xp >= thresholds[i]) level = i + 1;
+  }
+  return level;
+};
+
+// 🧠 XP award function
+const awardXP = async (userId, xpReward) => {
+  const res = await pool.query("SELECT xp FROM users WHERE id = $1", [userId]);
+  const currentXP = parseInt(res.rows[0]?.xp || 0);
+  const newXP = currentXP + xpReward;
+  const newLevel = calculateLevelFromXP(newXP);
+
+  await pool.query("UPDATE users SET xp = $1, level = $2 WHERE id = $3", [newXP, newLevel, userId]);
+};
+
 const processBadgeEvent = async (eventType, userId) => {
   const alreadyEarned = await getEarnedBadgesForUser(userId);
   const newlyEarned = [];
@@ -56,6 +76,13 @@ const processBadgeEvent = async (eventType, userId) => {
         alreadyEarned.add(badge.name);
         newlyEarned.push(badge.name);
         console.log(`[BadgeEngine] Awarded badge: "${badge.name}" to user: ${userId}`);
+
+        // 🎉 Award XP if defined
+        if (badge.xpReward) {
+          await awardXP(userId, badge.xpReward);
+          console.log(`[BadgeEngine] Added ${badge.xpReward} XP to user: ${userId}`);
+        }
+
         eventEmitter.emit("badgeAwarded", userId, badge.name);
       }
     }
@@ -74,6 +101,14 @@ const awardFirstLoginBadge = async (userId, db) => {
     );
     earnedBadgesCache.get(userId)?.add("First Login");
     console.log(`[BadgeEngine] Awarded badge: "First Login" to user: ${userId}`);
+
+    // Optional: Add XP for First Login badge if defined in badgeUtils
+    const firstLoginBadge = badgeUtils.find(b => b.name === "First Login");
+    if (firstLoginBadge?.xpReward) {
+      await awardXP(userId, firstLoginBadge.xpReward);
+      console.log(`[BadgeEngine] Added ${firstLoginBadge.xpReward} XP to user: ${userId}`);
+    }
+
     return true;
   } catch (err) {
     console.error(`[BadgeEngine Error] Failed to award "First Login" badge to user ${userId}:`, err);
@@ -81,7 +116,7 @@ const awardFirstLoginBadge = async (userId, db) => {
   }
 };
 
-// Register event handlers
+// 🔔 Register event listeners
 eventEmitter.on("userLoggedIn", async (userId) => {
   await processBadgeEvent("LOGIN", userId);
 });

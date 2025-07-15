@@ -2,19 +2,12 @@
 require("dotenv").config();
 const { Pool } = require("pg");
 
+// Create a new pool with SSL enabled (required for Supabase)
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URI,
   ssl: {
-    rejectUnauthorized: false, 
+    rejectUnauthorized: false, // Accept Supabase SSL cert
   },
 });
-
-// Optional test log
-pool.connect()
-  .then(() => console.log(" PostgreSQL Connected"))
-  .catch((err) => {
-    console.error(" PostgreSQL Connection Error:", err);
-    process.exit(1);
-  });
 
 module.exports = pool;

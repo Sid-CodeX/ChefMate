@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,58 +7,69 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ChefHat, Mail, Lock, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * LoginForm Component
+ * Renders the login UI and handles authentication using email and password.
+ * Integrates with AuthContext and displays toast feedback.
+ */
 const LoginForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const { login, isLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
+  /**
+   * Handle login form submission.
+   * Calls the login function from context and navigates or shows error accordingly.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
-    
-    if (success) {
+    const result = await login(email, password);
+
+    if (result.success) {
       toast({
-        title: "Welcome back!",
-        description: "You've successfully logged in.",
+        title: 'Login Successful',
+        description: 'Redirecting to your dashboard.',
       });
+      navigate('/dashboard');
     } else {
       toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
+        title: 'Login Failed',
+        description: result.message || 'Please check your credentials and try again.',
+        variant: 'destructive',
       });
     }
   };
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
-      {/* Cooking Background Image with Blur */}
-      <div 
+      {/* Background image with gradient and blur overlay */}
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')`
+          backgroundImage: `url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyNBlm0E4vN5IhRoaucKAsxpPFeniNGk2WeEeVlGKCu4wUbuxecsZxybKTWEJAPgpfuCc&usqp=CAU')`,
         }}
       >
-        <div className="absolute inset-0 backdrop-blur-sm bg-black/60"></div>
+        {/* Changed opacity from /60 to /30 and backdrop-blur-sm to backdrop-blur-xs for less blur */}
+        <div className="absolute inset-0 backdrop-blur-xs bg-black/30"></div>
       </div>
 
-      {/* Dark Gradient Overlay */}
+      {/* Floating decorative shapes and SVG grid background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1f1f2e]/90 via-[#121825]/85 to-[#0f1419]/90">
-        {/* Floating Shapes */}
         <div className="absolute top-20 left-20 w-32 h-32 bg-orange-500/10 rounded-full blur-xl animate-pulse"></div>
         <div className="absolute top-40 right-32 w-24 h-24 bg-yellow-400/10 rounded-full blur-lg animate-pulse delay-700"></div>
         <div className="absolute bottom-32 left-32 w-40 h-40 bg-orange-600/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
         <div className="absolute bottom-20 right-20 w-28 h-28 bg-red-500/10 rounded-full blur-lg animate-pulse delay-500"></div>
-        
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
+
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,...')] opacity-20"></div>
       </div>
 
-      {/* Main Content */}
+      {/* Main login card */}
       <div className="relative z-10 animate-fade-in">
         <Card className="w-full max-w-lg bg-[#2c2f3d]/90 backdrop-blur-xl border-gray-700/50 rounded-2xl shadow-2xl border">
           <CardHeader className="text-center pb-2">
+            {/* Logo */}
             <div className="flex justify-center mb-6">
               <div className="relative">
                 <div className="absolute inset-0 bg-orange-500/20 rounded-full blur-lg animate-pulse"></div>
@@ -69,18 +79,20 @@ const LoginForm = () => {
                 <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-yellow-400 animate-pulse" />
               </div>
             </div>
+            {/* Title & Subtext */}
             <CardTitle className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-2">
               ChefMate
             </CardTitle>
             <p className="text-gray-400 text-lg font-medium">Your AI Cooking Companion</p>
             <p className="text-sm text-gray-500 mt-2 flex items-center justify-center gap-1">
-              Your cooking journey starts here 
-              <span className="text-orange-400">🍲</span>
+              Your cooking journey starts here <span className="text-orange-400">🍲</span>
             </p>
           </CardHeader>
+
           <CardContent className="pt-6 px-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
+                {/* Email input */}
                 <div className="relative group">
                   <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400 group-focus-within:text-orange-400 transition-colors" />
                   <Input
@@ -92,7 +104,8 @@ const LoginForm = () => {
                     required
                   />
                 </div>
-                
+
+                {/* Password input */}
                 <div className="relative group">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400 group-focus-within:text-orange-400 transition-colors" />
                   <Input
@@ -106,15 +119,17 @@ const LoginForm = () => {
                 </div>
               </div>
 
+              {/* Forgot password link */}
               <div className="flex justify-end">
-                <Link 
-                  to="/forgot-password" 
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-orange-400 hover:text-orange-300 transition-colors font-medium"
                 >
                   Forgot password?
                 </Link>
               </div>
 
+              {/* Submit button */}
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold text-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-orange-500/25"
@@ -131,11 +146,12 @@ const LoginForm = () => {
               </Button>
             </form>
 
+            {/* Registration link */}
             <div className="mt-8 text-center space-y-4">
               <p className="text-gray-400">
-                Don't have an account?{' '}
-                <Link 
-                  to="/register" 
+                Don&apos;t have an account?{' '}
+                <Link
+                  to="/register"
                   className="text-orange-400 hover:text-orange-300 font-semibold transition-colors"
                 >
                   Sign up

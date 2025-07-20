@@ -1,10 +1,15 @@
-
 import React from 'react';
 import { X, Clock, ChefHat, Utensils } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+// No need to import Recipe from global type if it's transformed here
 
-interface Recipe {
+/**
+ * Defines the specific shape of the 'recipe' prop expected by RecipeModal.
+ * This is a transformation of the backend's Recipe structure for UI display.
+ * Aligns with CookableRecipeDisplayProps from Dashboard.tsx.
+ */
+interface RecipeModalDisplayProps {
   id: number;
   title: string;
   image: string;
@@ -16,28 +21,34 @@ interface Recipe {
   description: string;
   course: string;
   flavorProfile: string;
-  diet: 'Vegetarian' | 'Non-Vegetarian';
+  diet: string; // Changed to string for flexibility
   region?: string;
-  ingredients?: string[];
+  ingredients?: string[]; // Made optional, or ensure it's always provided
+  steps?: string[]; // Made optional, or ensure it's always provided
 }
 
 interface RecipeModalProps {
-  recipe: Recipe | null;
+  recipe: RecipeModalDisplayProps | null; // Use the new display-specific interface
   isOpen: boolean;
   onClose: () => void;
   onStartCooking: () => void;
 }
 
+/**
+ * RecipeModal Component
+ * Displays a detailed popup for a selected recipe, including ingredients and cooking time.
+ * Provides options to close the modal or start cooking mode.
+ */
 const RecipeModal = ({ recipe, isOpen, onClose, onStartCooking }: RecipeModalProps) => {
   if (!isOpen || !recipe) return null;
 
   const handleStartCooking = () => {
     onStartCooking();
-    onClose();
+    onClose(); // Close modal after starting cooking mode
   };
 
-  // Mock ingredients if not provided
-  const ingredients = recipe.ingredients || [
+  // Use provided ingredients or mock if not available (though ideally always provided now)
+  const ingredients = recipe.ingredients && recipe.ingredients.length > 0 ? recipe.ingredients : [
     "Main protein or base ingredient",
     "Spices and seasonings",
     "Fresh vegetables",
@@ -50,8 +61,8 @@ const RecipeModal = ({ recipe, isOpen, onClose, onStartCooking }: RecipeModalPro
       <div className="bg-[#2a2f45] border border-gray-700 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header with close button */}
         <div className="relative">
-          <img 
-            src={recipe.image} 
+          <img
+            src={recipe.image}
             alt={recipe.title}
             className="w-full h-64 object-cover rounded-t-xl"
           />
@@ -65,11 +76,11 @@ const RecipeModal = ({ recipe, isOpen, onClose, onStartCooking }: RecipeModalPro
             <h2 className="text-2xl font-bold text-white mb-2">{recipe.title}</h2>
             <div className="flex items-center space-x-2">
               <span className="text-yellow-400">⭐ {recipe.rating}</span>
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className={`${
-                  recipe.diet === 'Vegetarian' 
-                    ? 'bg-green-500/20 text-green-300' 
+                  recipe.diet === 'Vegetarian'
+                    ? 'bg-green-500/20 text-green-300'
                     : 'bg-red-500/20 text-red-300'
                 }`}
               >
@@ -143,21 +154,24 @@ const RecipeModal = ({ recipe, isOpen, onClose, onStartCooking }: RecipeModalPro
             </ul>
           </div>
 
-          {/* Tags */}
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-3">Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {recipe.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="bg-orange-500/20 text-orange-300">
-                  {tag}
-                </Badge>
-              ))}
+          {/* Tags (if any are left after initial ones) */}
+          {recipe.tags && recipe.tags.length > 2 && ( // Only show remaining tags if any
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Additional Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {recipe.tags.slice(2).map((tag, index) => ( // Assuming first two tags are already displayed
+                  <Badge key={index} variant="secondary" className="bg-orange-500/20 text-orange-300">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
 
           {/* Start Cooking Button */}
           <div className="pt-4 border-t border-gray-700">
-            <Button 
+            <Button
               onClick={handleStartCooking}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 text-lg transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30"
             >

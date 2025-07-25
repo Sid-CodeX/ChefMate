@@ -1,4 +1,4 @@
-// Imports
+// Core imports
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Heart } from 'lucide-react';
 import RecipeCard from '@/components/RecipeCard';
@@ -8,31 +8,36 @@ import { useToast } from '@/hooks/use-toast';
 import { Recipe } from '@/types/recipe';
 import { favoritesService } from '@/services/favoritesService';
 
-// Default fallback image
+// Fallback image for missing recipe images
 const FALLBACK_IMAGE_URL = '/placeholder.svg';
 
 /**
- * Favorites Component
- * Displays and manages the user's favorite recipes.
+ * Favorites Page
+ * Displays user's favorite recipes with stats and handles favorite toggle.
  */
-const Favorites = () => {
+export const Favorites = () => {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch favorite recipes (enabled only when user is authenticated)
-  const { data: favoriteRecipes, isLoading: favoritesLoading, isError: favoritesError, error: favoritesFetchError } = useQuery<Recipe[], Error>({
+  // Fetch user's favorite recipes
+  const {
+    data: favoriteRecipes,
+    isLoading: favoritesLoading,
+    isError: favoritesError,
+    error: favoritesFetchError
+  } = useQuery<Recipe[], Error>({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user?.token) return [];
       const fetchedFavorites = await favoritesService.getFavorites(user.token);
-      return fetchedFavorites;
+      return Array.isArray(fetchedFavorites) ? fetchedFavorites : [];
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // cache for 5 minutes
+    staleTime: 0
   });
 
-  // Show error toast if fetching favorites fails
+  // Show toast on fetch error
   useEffect(() => {
     if (favoritesError && favoritesFetchError) {
       toast({
@@ -43,22 +48,17 @@ const Favorites = () => {
     }
   }, [favoritesError, favoritesFetchError, toast]);
 
-  // Mutation: Add a recipe to favorites
+  // Mutation to add a recipe to favorites
   const addFavoriteMutation = useMutation<void, Error, number>({
-    mutationFn: async (recipeId: number) => {
+    mutationFn: async (recipeId) => {
       if (!user?.token) throw new Error('Not authenticated.');
       await favoritesService.addToFavorites(recipeId, user.token);
     },
     onSuccess: (data, recipeId) => {
-      queryClient.setQueryData<Recipe[]>(['favorites', user?.id], (old) => {
-        const existing = old ? new Set(old.map(r => r.id)) : new Set();
-        if (!existing.has(recipeId)) {
-          return old ? [...old, { id: recipeId } as Recipe] : [{ id: recipeId } as Recipe];
-        }
-        return old;
-      });
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['favorites', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.refetchQueries({ queryKey: ['recipes'] });
       toast({ title: 'Added to Favorites!', description: 'Recipe successfully favorited.' });
     },
     onError: (err) => {
@@ -66,18 +66,17 @@ const Favorites = () => {
     },
   });
 
-  // Mutation: Remove a recipe from favorites
+  // Mutation to remove a recipe from favorites
   const removeFavoriteMutation = useMutation<void, Error, number>({
-    mutationFn: async (recipeId: number) => {
+    mutationFn: async (recipeId) => {
       if (!user?.token) throw new Error('Not authenticated.');
       await favoritesService.removeFromFavorites(recipeId, user.token);
     },
     onSuccess: (data, recipeId) => {
-      queryClient.setQueryData<Recipe[]>(['favorites', user?.id], (old) =>
-        (old || []).filter(recipe => recipe.id !== recipeId)
-      );
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['favorites', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.refetchQueries({ queryKey: ['recipes'] });
       toast({ title: 'Removed from Favorites', description: 'Recipe successfully unfavorited.' });
     },
     onError: (err) => {
@@ -85,7 +84,7 @@ const Favorites = () => {
     },
   });
 
-  // Handle favorite toggle action from UI
+  // Toggle favorite status
   const handleFavoriteToggle = useCallback(async (recipeId: number, isFavorited: boolean) => {
     if (!user) {
       toast({ title: 'Authentication Required', description: 'Please log in to manage favorites.', variant: 'destructive' });
@@ -98,27 +97,24 @@ const Favorites = () => {
     }
   }, [user, addFavoriteMutation, removeFavoriteMutation, toast]);
 
-  // Fallback to empty list if no data is loaded
-  const recipesToDisplay: Recipe[] = favoriteRecipes || [];
+  // Safely fallback to empty array
+  const recipesToDisplay: Recipe[] = Array.isArray(favoriteRecipes) ? favoriteRecipes : [];
 
-  // Compute basic stats: total favorites, average cook time, and most popular tag
+  // Compute stats: total count, average cook time, most common tag
   const stats = useMemo(() => {
     const totalFavorites = recipesToDisplay.length;
 
     const totalCookTime = recipesToDisplay.reduce((sum, recipe) => {
-      const cookTimeNum = parseInt(recipe.cook_time);
-      return sum + (isNaN(cookTimeNum) ? 0 : cookTimeNum);
+      const cookTime = parseInt(recipe.cook_time);
+      return sum + (isNaN(cookTime) ? 0 : cookTime);
     }, 0);
+
     const avgCookTime = totalFavorites > 0 ? Math.round(totalCookTime / totalFavorites) : 0;
 
-    const tagCounts: { [key: string]: number } = {};
+    const tagCounts: Record<string, number> = {};
     recipesToDisplay.forEach(recipe => {
-      if (recipe.flavor_profile) {
-        tagCounts[recipe.flavor_profile] = (tagCounts[recipe.flavor_profile] || 0) + 1;
-      }
-      if (recipe.course) {
-        tagCounts[recipe.course] = (tagCounts[recipe.course] || 0) + 1;
-      }
+      if (recipe.flavor_profile) tagCounts[recipe.flavor_profile] = (tagCounts[recipe.flavor_profile] || 0) + 1;
+      if (recipe.course) tagCounts[recipe.course] = (tagCounts[recipe.course] || 0) + 1;
     });
 
     let mostPopularTag = 'N/A';
@@ -133,7 +129,7 @@ const Favorites = () => {
     return { totalFavorites, avgCookTime, mostPopularTag };
   }, [recipesToDisplay]);
 
-  // Loading UI while fetching or mutating
+  // Loading state
   if (authLoading || favoritesLoading || addFavoriteMutation.isPending || removeFavoriteMutation.isPending) {
     return (
       <div className="max-w-7xl mx-auto py-10 text-center text-white">
@@ -142,7 +138,7 @@ const Favorites = () => {
     );
   }
 
-  // Error fallback UI
+  // Error state
   if (favoritesError) {
     return (
       <div className="max-w-7xl mx-auto py-10 text-center text-red-400">
@@ -151,10 +147,9 @@ const Favorites = () => {
     );
   }
 
-  // Render UI
   return (
     <div className="max-w-7xl mx-auto p-4">
-      {/* Header */}
+      {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center space-x-3 mb-4">
           <Heart className="h-8 w-8 text-red-500 fill-current" />
@@ -174,7 +169,6 @@ const Favorites = () => {
             <Heart className="h-8 w-8 text-red-500" />
           </div>
         </div>
-
         <div className="bg-[#2a2f45] rounded-lg p-6 border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
@@ -184,7 +178,6 @@ const Favorites = () => {
             <div className="text-2xl text-gray-400">⏰</div>
           </div>
         </div>
-
         <div className="bg-[#2a2f45] rounded-lg p-6 border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
@@ -196,15 +189,13 @@ const Favorites = () => {
         </div>
       </div>
 
-      {/* Favorite Recipes Grid */}
+      {/* Favorite Recipes List */}
       {recipesToDisplay.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {recipesToDisplay.map((recipe) => {
-            const ingredientsArrayForCard = recipe.ingredients
+            const ingredientsArray = recipe.ingredients
               ? recipe.ingredients.split(',').map(item => item.trim())
               : [];
-
-            const cookTimeNumber = parseInt(recipe.cook_time);
 
             return (
               <RecipeCard
@@ -213,17 +204,19 @@ const Favorites = () => {
                   id: recipe.id,
                   title: recipe.name,
                   image: recipe.img_url || FALLBACK_IMAGE_URL,
-                  cookTime: `${cookTimeNumber} mins`,
+                  cookTime: `${parseInt(recipe.cook_time)} mins`,
                   difficulty: recipe.difficulty,
-                  tags: [recipe.flavor_profile, recipe.course],
+                  tags: [recipe.flavor_profile, recipe.course].filter(Boolean) as string[],
                   rating: 4.5,
-                  description: ingredientsArrayForCard.join(', '),
+                  description: ingredientsArray.join(', '),
                   course: recipe.course,
                   flavorProfile: recipe.flavor_profile,
                   diet: recipe.diet,
                   region: recipe.region,
-                  ingredients: ingredientsArrayForCard,
-                  steps: recipe.instruction ? recipe.instruction.split('\r\n').map(step => step.trim()).filter(step => step.length > 0) : [],
+                  ingredients: ingredientsArray,
+                  steps: recipe.instruction
+                    ? recipe.instruction.split('\r\n').map(s => s.trim()).filter(Boolean)
+                    : [],
                   prepTime: parseInt(recipe.prep_time)
                 }}
                 isFavorited={true}
@@ -233,7 +226,7 @@ const Favorites = () => {
           })}
         </div>
       ) : (
-        // Empty state
+        // Empty state UI
         <div className="text-center py-16">
           <Heart className="h-16 w-16 text-gray-600 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-400 mb-2">No favorites yet</h3>

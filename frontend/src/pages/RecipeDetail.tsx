@@ -1,138 +1,107 @@
-
+// React & Routing
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+
+// UI Components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, ChefHat, MapPin, Utensils, Share2 } from "lucide-react";
+import { ArrowLeft, Clock, ChefHat, MapPin, Utensils, Share2, Sparkles } from "lucide-react";
 import CookingBox from "@/components/CookingBox";
+
+// Hooks & Types
 import { useToast } from "@/hooks/use-toast";
+import { Recipe } from '@/types/recipe';
 
-interface Recipe {
-  id: number;
-  name: string;
-  img_url: string;
-  ingredients: string[];
-  diet: 'Vegetarian' | 'Non-Vegetarian';
-  prep_time: number;
-  cook_time: number;
-  flavor_profile: string;
-  course: string;
-  state: string;
-  region: string;
-  steps: string[];
-}
+// Constants
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const FALLBACK_IMAGE_URL = '/placeholder.svg';
 
+/**
+ * Displays detailed information for a single recipe.
+ * Includes loading state, error handling, share, and rewrite features.
+ */
 const RecipeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCookingMode, setShowCookingMode] = useState(false);
 
-  // Mock recipe data - in real app, this would be fetched from backend
+  // Fetch recipe by ID on component mount or ID change
   useEffect(() => {
-    const mockRecipes: Recipe[] = [
-      {
-        id: 1,
-        name: "Butter Chicken",
-        img_url: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800",
-        ingredients: ["2 lbs chicken breast", "1 cup heavy cream", "2 tbsp butter", "1 onion, diced", "3 cloves garlic", "1 tbsp garam masala", "1 can tomato sauce", "Salt to taste"],
-        diet: "Non-Vegetarian",
-        prep_time: 20,
-        cook_time: 30,
-        flavor_profile: "Mild & Creamy",
-        course: "Main Course",
-        state: "Punjab",
-        region: "North India",
-        steps: [
-          "Marinate chicken with spices for 30 minutes",
-          "Heat butter in a pan and cook chicken until golden",
-          "Remove chicken and sauté onions and garlic",
-          "Add tomato sauce and cream, simmer for 10 minutes",
-          "Return chicken to sauce and cook for 15 minutes",
-          "Garnish with fresh cilantro and serve hot"
-        ]
-      },
-      {
-        id: 2,
-        name: "Spicy Thai Basil Chicken",
-        img_url: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800",
-        ingredients: ["1 lb ground chicken", "3 Thai chilies", "4 cloves garlic", "1 cup Thai basil", "2 tbsp fish sauce", "1 tbsp oyster sauce", "1 tbsp sugar", "2 tbsp oil"],
-        diet: "Non-Vegetarian",
-        prep_time: 15,
-        cook_time: 20,
-        flavor_profile: "Spicy",
-        course: "Main Course",
-        state: "International",
-        region: "Southeast Asia",
-        steps: [
-          "Heat oil in wok over high heat",
-          "Add minced garlic and chilies, stir-fry for 30 seconds",
-          "Add ground chicken and cook until no longer pink",
-          "Add fish sauce, oyster sauce, and sugar",
-          "Stir in Thai basil leaves until wilted",
-          "Serve immediately over rice"
-        ]
-      },
-      {
-        id: 3,
-        name: "Classic Beef Bolognese",
-        img_url: "https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=800",
-        ingredients: ["1 lb ground beef", "1 onion diced", "2 carrots diced", "2 celery stalks", "4 cloves garlic", "1 can crushed tomatoes", "1/2 cup red wine", "2 tbsp tomato paste"],
-        diet: "Non-Vegetarian",
-        prep_time: 20,
-        cook_time: 45,
-        flavor_profile: "Rich & Savory",
-        course: "Main Course",
-        state: "International",
-        region: "Europe",
-        steps: [
-          "Heat oil and sauté onions, carrots, and celery until soft",
-          "Add garlic and cook for 1 minute",
-          "Add ground beef and cook until browned",
-          "Stir in tomato paste and cook for 2 minutes",
-          "Add wine and let it reduce by half",
-          "Add crushed tomatoes and simmer for 45 minutes"
-        ]
-      },
-      {
-        id: 4,
-        name: "Avocado Toast Deluxe",
-        img_url: "https://images.unsplash.com/photo-1541519869434-d3d9f32977c3?w=800",
-        ingredients: ["2 slices sourdough bread", "1 ripe avocado", "2 eggs", "Cherry tomatoes", "Everything bagel seasoning", "Olive oil", "Salt and pepper", "Lemon juice"],
-        diet: "Vegetarian",
-        prep_time: 5,
-        cook_time: 10,
-        flavor_profile: "Fresh & Light",
-        course: "Breakfast",
-        state: "International",
-        region: "Modern",
-        steps: [
-          "Toast bread slices until golden brown",
-          "Mash avocado with lemon juice, salt, and pepper",
-          "Poach eggs in simmering water for 3-4 minutes",
-          "Spread avocado mixture on toast",
-          "Top with poached egg and cherry tomatoes",
-          "Sprinkle with everything bagel seasoning"
-        ]
+    const fetchRecipe = async () => {
+      if (!id) {
+        setError("Recipe ID is missing.");
+        setIsLoading(false);
+        return;
       }
-    ];
 
-    const foundRecipe = mockRecipes.find(r => r.id === parseInt(id || '0'));
-    setRecipe(foundRecipe || null);
-  }, [id]);
+      setIsLoading(true);
+      setError(null);
 
+      try {
+        const response = await fetch(`${API_BASE_URL}/recipes/${id}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setRecipe(data.recipe);
+        } else {
+          setError(data.message || "Failed to load recipe details.");
+          toast({
+            title: "Recipe Load Failed",
+            description: data.message || "Could not retrieve recipe details.",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        console.error("Network error:", err);
+        setError("Network error. Please check your connection.");
+        toast({
+          title: "Network Error",
+          description: "Failed to connect to the recipe service.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecipe();
+  }, [id, toast]);
+
+  /**
+   * Copies formatted recipe details to clipboard.
+   */
   const handleShareRecipe = async () => {
-    if (!recipe) return;
+    if (!recipe) {
+      toast({
+        title: "No Recipe to Share",
+        description: "Please wait for the recipe to load.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const ingredientsArray = recipe.ingredients
+      ? recipe.ingredients.split(',').map(ing => ing.trim())
+      : [];
+
+    const stepsArray = recipe.instruction
+      ? recipe.instruction.split('\r\n').map(step => step.trim()).filter(Boolean)
+      : [];
 
     const recipeText = `
 🍽️ ${recipe.name}
 
 📋 Ingredients:
-${recipe.ingredients.map(ing => `• ${ing}`).join('\n')}
+${ingredientsArray.map(ing => `• ${ing}`).join('\n')}
 
 👨‍🍳 Cooking Steps:
-${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
+${stepsArray.map((step, i) => `${i + 1}. ${step}`).join('\n')}
 
 ⏱️ Prep Time: ${recipe.prep_time} min | Cook Time: ${recipe.cook_time} min
 🥗 Diet: ${recipe.diet}
@@ -142,21 +111,64 @@ ${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
     try {
       await navigator.clipboard.writeText(recipeText);
       toast({
-        title: "Recipe copied to clipboard ✅",
-        description: "Share it with your friends!",
+        title: "Recipe Copied!",
+        description: "Details copied to clipboard for sharing.",
       });
-    } catch (err) {
+    } catch {
       toast({
-        title: "Failed to copy recipe",
-        description: "Please try again",
+        title: "Copy Failed",
+        description: "Could not copy recipe. Try again.",
         variant: "destructive",
       });
     }
   };
 
-  if (!recipe) {
+  /**
+   * Navigates to AI-based recipe customizer with pre-filled content.
+   */
+  const handleRewriteRecipe = () => {
+    if (!recipe) {
+      toast({
+        title: "Recipe Not Loaded",
+        description: "Please wait for the recipe to load.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formattedRecipeContent = `
+${recipe.name}
+
+Ingredients:
+${recipe.ingredients.split(',').map(ing => `• ${ing.trim()}`).join('\n')}
+
+Instructions:
+${recipe.instruction.split('\r\n').map((step, i) => `${i + 1}. ${step.trim()}`).filter(Boolean).join('\n')}
+
+Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
+    `.trim();
+
+    navigate('/recipe-customizer', {
+      state: {
+        originalRecipeContent: formattedRecipeContent,
+        originalRecipeName: recipe.name,
+      },
+    });
+  };
+
+  // Loading State UI
+  if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-white">Loading recipe...</p>
+      </div>
+    );
+  }
+
+  // Error State UI
+  if (error) {
+    return (
+      <div className="space-y-6 p-4">
         <div className="flex items-center space-x-4">
           <Link to="/dashboard">
             <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white">
@@ -166,15 +178,48 @@ ${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
           </Link>
         </div>
         <div className="text-center py-12">
-          <p className="text-gray-400">Recipe not found</p>
+          <p className="text-red-400">{error}</p>
         </div>
       </div>
     );
   }
 
+  // No Recipe Found UI
+  if (!recipe) {
+    return (
+      <div className="space-y-6 p-4">
+        <div className="flex items-center space-x-4">
+          <Link to="/dashboard">
+            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Recipes
+            </Button>
+          </Link>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-gray-400">Recipe not found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Parse data for rendering
+  const ingredientsForDisplay = recipe.ingredients
+    ? recipe.ingredients.split(',').map(item => item.trim())
+    : [];
+
+  const stepsForDisplay = recipe.instruction
+    ? recipe.instruction.split('\r\n').map(step => step.trim()).filter(Boolean)
+    : [];
+
+  const prepTimeNum = parseInt(recipe.prep_time);
+  const cookTimeNum = parseInt(recipe.cook_time);
+  const totalTimeNum = parseInt(recipe.total_time);
+
   return (
-    <div className="space-y-6">
-      {/* Back Button */}
+    <div className="space-y-6 p-4">
+
+      {/* Navigation & Action Buttons */}
       <div className="flex items-center justify-between">
         <Link to="/dashboard">
           <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white">
@@ -182,17 +227,33 @@ ${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
             Back to Recipes
           </Button>
         </Link>
-        <Button onClick={handleShareRecipe} variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700">
-          <Share2 className="h-4 w-4 mr-2" />
-          Share Recipe
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            onClick={handleShareRecipe}
+            variant="outline"
+            size="sm"
+            className="bg-gray-700 border-gray-600 text-white hover:bg-orange-500 hover:border-orange-500"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share
+          </Button>
+          <Button
+            onClick={handleRewriteRecipe}
+            variant="outline"
+            size="sm"
+            className="bg-orange-600 border-orange-500 text-white hover:bg-orange-700"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Rewrite Recipe
+          </Button>
+        </div>
       </div>
 
-      {/* Recipe Header */}
+      {/* Recipe Header with Image and Metadata */}
       <Card className="bg-[#2c2f3d] border-gray-700">
         <div className="relative">
-          <img 
-            src={recipe.img_url} 
+          <img
+            src={recipe.img_url || FALLBACK_IMAGE_URL}
             alt={recipe.name}
             className="w-full h-64 md:h-80 object-cover rounded-t-lg"
           />
@@ -214,49 +275,24 @@ ${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
         </div>
       </Card>
 
-      {/* Recipe Info Grid */}
+      {/* Recipe Details Grid */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Left Column - Details */}
+        {/* Left Column - Time & Location Info */}
         <div className="space-y-6">
-          {/* Time & Location Info */}
           <Card className="bg-[#2c2f3d] border-gray-700">
             <CardHeader>
               <CardTitle className="text-white text-lg">Recipe Info</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-gray-300">
-                  <Clock className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm">Prep Time</span>
-                </div>
-                <span className="text-white font-medium">{recipe.prep_time} min</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-gray-300">
-                  <ChefHat className="h-4 w-4 text-green-400" />
-                  <span className="text-sm">Cook Time</span>
-                </div>
-                <span className="text-white font-medium">{recipe.cook_time} min</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-gray-300">
-                  <MapPin className="h-4 w-4 text-red-400" />
-                  <span className="text-sm">Origin</span>
-                </div>
-                <span className="text-white font-medium">{recipe.state}, {recipe.region}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-gray-300">
-                  <Utensils className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm">Total Time</span>
-                </div>
-                <span className="text-white font-medium">{recipe.prep_time + recipe.cook_time} min</span>
-              </div>
+              <InfoRow icon={<Clock className="h-4 w-4 text-blue-400" />} label="Prep Time" value={`${prepTimeNum} min`} />
+              <InfoRow icon={<ChefHat className="h-4 w-4 text-green-400" />} label="Cook Time" value={`${cookTimeNum} min`} />
+              <InfoRow icon={<MapPin className="h-4 w-4 text-red-400" />} label="Origin" value={`${recipe.state}, ${recipe.region}`} />
+              <InfoRow icon={<Utensils className="h-4 w-4 text-yellow-400" />} label="Total Time" value={`${totalTimeNum} min`} />
             </CardContent>
           </Card>
 
-          {/* Start Cooking Button */}
-          <Button 
+          {/* Cooking Mode Toggle */}
+          <Button
             onClick={() => setShowCookingMode(!showCookingMode)}
             className="w-full bg-orange-500 hover:bg-orange-600 text-lg py-3"
           >
@@ -264,14 +300,14 @@ ${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
           </Button>
         </div>
 
-        {/* Right Column - Ingredients */}
+        {/* Right Column - Ingredients List */}
         <Card className="bg-[#2c2f3d] border-gray-700">
           <CardHeader>
             <CardTitle className="text-white text-lg">Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              {recipe.ingredients.map((ingredient, index) => (
+              {ingredientsForDisplay.map((ingredient, index) => (
                 <li key={index} className="flex items-start space-x-2 text-gray-300">
                   <span className="text-orange-400 mt-1">•</span>
                   <span>{ingredient}</span>
@@ -282,17 +318,44 @@ ${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
         </Card>
       </div>
 
-      {/* Cooking Mode */}
+      {/* Cooking Mode UI */}
       {showCookingMode && (
-        <CookingBox 
-          steps={recipe.steps}
-          totalCookTime={recipe.cook_time}
+        <CookingBox
+          steps={stepsForDisplay}
+          totalCookTime={cookTimeNum}
           title={recipe.name}
           onExit={() => setShowCookingMode(false)}
         />
       )}
+
+      {/* Cooking Steps */}
+      <Card className="bg-[#2c2f3d] border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white text-lg">Cooking Steps</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-4 list-decimal list-inside">
+            {stepsForDisplay.map((step, index) => (
+              <li key={index} className="text-gray-300 leading-relaxed">
+                <span className="font-semibold text-white mr-1">Step {index + 1}:</span> {step}
+              </li>
+            ))}
+          </ol>
+        </CardContent>
+      </Card>
     </div>
   );
 };
+
+// Helper component to render rows in the recipe info card
+const InfoRow = ({ icon, label, value }: { icon: JSX.Element; label: string; value: string }) => (
+  <div className="flex items-center justify-between">
+    <div className="flex items-center space-x-2 text-gray-300">
+      {icon}
+      <span className="text-sm">{label}</span>
+    </div>
+    <span className="text-white font-medium">{value}</span>
+  </div>
+);
 
 export default RecipeDetail;

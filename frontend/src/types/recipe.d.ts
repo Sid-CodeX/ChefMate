@@ -7,7 +7,7 @@
 export interface Recipe {
   id: number;
   name: string;
-  img_url: string;
+  image_url: string;
   ingredients: string; // Corrected: backend sends as a single string
   diet: string;
   prep_time: string; // Corrected: backend sends as string

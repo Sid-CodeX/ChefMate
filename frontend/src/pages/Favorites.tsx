@@ -199,7 +199,7 @@ export const Favorites = () => {
                 recipe={{
                   id: recipe.id,
                   title: recipe.name,
-                  image: recipe.img_url || FALLBACK_IMAGE_URL,
+                  image: recipe.image_url || FALLBACK_IMAGE_URL,
                   cookTime: `${parseInt(recipe.cook_time)} mins`,
                   difficulty: recipe.difficulty,
                   tags: [recipe.flavor_profile, recipe.course].filter(Boolean) as string[],

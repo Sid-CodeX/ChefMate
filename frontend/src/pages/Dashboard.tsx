@@ -203,7 +203,7 @@ const Dashboard = () => {
     setSelectedRecipeForCooking({
       id: recipe.id,
       title: recipe.name,
-      image: recipe.img_url || FALLBACK_IMAGE_URL,
+      image: recipe.image_url || FALLBACK_IMAGE_URL,
       prepTime: parseInt(recipe.prep_time),
       cookTime: parseInt(recipe.cook_time),
       difficulty: recipe.difficulty,
@@ -298,7 +298,7 @@ const Dashboard = () => {
               recipe={{
                 id: recipe.id,
                 title: recipe.name,
-                image: recipe.img_url || FALLBACK_IMAGE_URL,
+                image: recipe.image_url || FALLBACK_IMAGE_URL,
                 cookTime: `${parseInt(recipe.cook_time)} mins`,
                 difficulty: recipe.difficulty,
                 tags: [recipe.flavor_profile, recipe.course].filter(Boolean) as string[],
@@ -338,7 +338,7 @@ const Dashboard = () => {
           recipe={{
             id: selectedRecipe.id,
             title: selectedRecipe.name,
-            image: selectedRecipe.img_url || FALLBACK_IMAGE_URL,
+            image: selectedRecipe.image_url || FALLBACK_IMAGE_URL,
             prepTime: parseInt(selectedRecipe.prep_time),
             cookTime: parseInt(selectedRecipe.cook_time),
             difficulty: selectedRecipe.difficulty,

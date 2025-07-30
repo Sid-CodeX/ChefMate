@@ -1,8 +1,6 @@
-// React and core libraries
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
-// UI components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +10,6 @@ import RecipeModal from "@/components/RecipeModal";
 import RecipePagination from "@/components/RecipePagination";
 import FilterDropdown from "@/components/FilterDropdown";
 
-// Hooks and services
 import { useDebounce } from "@/hooks/useDebounce";
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { recipeService } from '@/services/recipeService';
@@ -20,13 +17,10 @@ import { favoritesService } from '@/services/favoritesService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Types
 import { Recipe } from '../types/recipe';
 
-// Lazy-loaded component
 const CookingBox = React.lazy(() => import("@/components/CookingBox"));
 
-// Filter type for dropdowns and API filters
 export interface FilterOptions {
   diet: string[];
   course: string[];
@@ -35,7 +29,6 @@ export interface FilterOptions {
   region: string[];
 }
 
-// Recipe shape for CookingBox and RecipeModal
 interface CookableRecipeDisplayProps {
   id: number;
   title: string;
@@ -57,10 +50,6 @@ interface CookableRecipeDisplayProps {
 const RECIPES_PER_PAGE = 6;
 const FALLBACK_IMAGE_URL = '/placeholder.svg';
 
-/**
- * Dashboard Component
- * Handles recipe listing with search, filters, pagination, modals, and cooking view.
- */
 const Dashboard = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -94,7 +83,6 @@ const Dashboard = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Show toast on error
   useEffect(() => {
     if (isError && error) {
       toast({
@@ -105,20 +93,30 @@ const Dashboard = () => {
     }
   }, [isError, error, toast]);
 
-  // Fetch user's favorite recipe IDs
-  const { data: favoritedRecipeIds, isLoading: favoritesLoading } = useQuery<Set<number>, Error>({
+  // Fetch user's favorite recipe IDs as a Set
+  const { data: favoritedRecipeIds, isLoading: favoritesLoading, refetch: refetchFavorites } = useQuery<Set<number>, Error>({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user?.token) return new Set();
       try {
         const favorites = await favoritesService.getFavorites(user.token);
-        return Array.isArray(favorites) ? new Set(favorites.map(fav => fav.id)) : new Set();
-      } catch {
+        // If backend returns array of recipes, map to IDs
+        if (Array.isArray(favorites)) {
+          // If the array is [{id: 1, ...}, ...], map to id
+          if (favorites.length > 0 && typeof favorites[0] === 'object' && 'id' in favorites[0]) {
+            return new Set(favorites.map((fav: any) => fav.id));
+          }
+          // If the array is [1, 2, 3], use as is
+          return new Set(favorites);
+        }
+        return new Set();
+      } catch (err) {
         return new Set();
       }
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always fresh after mutation
+    initialData: new Set()
   });
 
   // Add recipe to favorites
@@ -127,14 +125,9 @@ const Dashboard = () => {
       if (!user?.token) throw new Error('Not authenticated.');
       await favoritesService.addToFavorites(recipeId, user.token);
     },
-    onSuccess: (_, recipeId) => {
-      queryClient.setQueryData<Set<number>>(['favorites', user?.id], (old) => {
-        const newSet = new Set(old || []);
-        newSet.add(recipeId);
-        return newSet;
-      });
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+      refetchFavorites();
       toast({ title: 'Added to Favorites!', description: 'Recipe successfully favorited.' });
     },
     onError: (err) => {
@@ -148,14 +141,9 @@ const Dashboard = () => {
       if (!user?.token) throw new Error('Not authenticated.');
       await favoritesService.removeFromFavorites(recipeId, user.token);
     },
-    onSuccess: (_, recipeId) => {
-      queryClient.setQueryData<Set<number>>(['favorites', user?.id], (old) => {
-        const newSet = new Set(old || []);
-        newSet.delete(recipeId);
-        return newSet;
-      });
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
+      refetchFavorites();
       toast({ title: 'Removed from Favorites', description: 'Recipe removed from favorites.' });
     },
     onError: (err) => {
@@ -172,7 +160,7 @@ const Dashboard = () => {
     isFavorited
       ? await removeFavoriteMutation.mutateAsync(recipeId)
       : await addFavoriteMutation.mutateAsync(recipeId);
-  }, [user, toast]);
+  }, [user, addFavoriteMutation, removeFavoriteMutation, toast]);
 
   // Memoized recipe pagination
   const { filteredRecipes, totalPages, paginatedRecipes } = useMemo(() => {
@@ -186,7 +174,6 @@ const Dashboard = () => {
     };
   }, [recipes, currentPage]);
 
-  // Reset pagination when filters or search change
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchQuery, filters]);
@@ -246,8 +233,7 @@ const Dashboard = () => {
 
   if (
     isLoading || favoritesLoading ||
-    addFavoriteMutation.isPending || removeFavoriteMutation.isPending ||
-    !(favoritedRecipeIds instanceof Set)
+    addFavoriteMutation.isPending || removeFavoriteMutation.isPending
   ) {
     return (
       <div className="container mx-auto py-10 flex justify-center items-center min-h-[500px]">
@@ -264,6 +250,9 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  // Always use a Set for favoritedRecipeIds
+  const safeFavoritedRecipeIds = favoritedRecipeIds instanceof Set ? favoritedRecipeIds : new Set();
 
   return (
     <div className="container mx-auto py-10 space-y-6">
@@ -302,7 +291,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {paginatedRecipes.map((recipe) => {
           const ingredientsArray = recipe.ingredients?.split(',').map(item => item.trim()) || [];
-          const isFavorited = favoritedRecipeIds.has(recipe.id);
+          const isFavorited = safeFavoritedRecipeIds.has(recipe.id);
           return (
             <RecipeCard
               key={recipe.id}
@@ -361,7 +350,7 @@ const Dashboard = () => {
             diet: selectedRecipe.diet,
             region: selectedRecipe.region,
             ingredients: selectedRecipe.ingredients?.split(',').map(item => item.trim()) || [],
-            steps: selectedRecipe.instruction?.split('\r\n').map(s => s.trim()).filter(Boolean) || [],
+            steps: selectedRecipe.instruction?.split('\r\n').map(s => s.trim()).filter(Boolean) || []
           }}
           isOpen={isModalOpen}
           onClose={handleCloseModal}

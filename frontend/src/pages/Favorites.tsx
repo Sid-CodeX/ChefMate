@@ -1,5 +1,5 @@
 // Core imports
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { Heart } from 'lucide-react';
 import RecipeCard from '@/components/RecipeCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,11 +54,9 @@ export const Favorites = () => {
       if (!user?.token) throw new Error('Not authenticated.');
       await favoritesService.addToFavorites(recipeId, user.token);
     },
-    onSuccess: (data, recipeId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
-      queryClient.refetchQueries({ queryKey: ['favorites', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
-      queryClient.refetchQueries({ queryKey: ['recipes'] });
       toast({ title: 'Added to Favorites!', description: 'Recipe successfully favorited.' });
     },
     onError: (err) => {
@@ -72,11 +70,9 @@ export const Favorites = () => {
       if (!user?.token) throw new Error('Not authenticated.');
       await favoritesService.removeFromFavorites(recipeId, user.token);
     },
-    onSuccess: (data, recipeId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites', user?.id] });
-      queryClient.refetchQueries({ queryKey: ['favorites', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
-      queryClient.refetchQueries({ queryKey: ['recipes'] });
       toast({ title: 'Removed from Favorites', description: 'Recipe successfully unfavorited.' });
     },
     onError: (err) => {

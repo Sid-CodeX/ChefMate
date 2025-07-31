@@ -1,14 +1,15 @@
 // External dependencies
 const axios = require('axios');
 const ChatModel = require('../models/chatModel');
+const ShoppingListModel = require('../models/shoppingListModel');
 
-// Hugging Face Space API base URL
+// Environment variable: Hugging Face Space base URL
 const HF_SPACE_BASE_URL = process.env.HF_SPACE_BASE_URL;
 
 /**
- * Maps customization options to specific AI instructions
- * @param {string} optionParam
- * @returns {string} AI instruction string
+ * Maps customization options to AI-friendly instructions.
+ * @param {string} optionParam - Customization option.
+ * @returns {string} Instruction string for the AI.
  */
 const mapCustomizationOptionToInstruction = (optionParam) => {
   switch (optionParam) {
@@ -30,7 +31,10 @@ const mapCustomizationOptionToInstruction = (optionParam) => {
   }
 };
 
-// Sends a recipe and customization instruction to Hugging Face for rewriting
+/**
+ * POST /customize-recipe
+ * Sends recipe and instruction to Hugging Face and returns the customized result.
+ */
 exports.customizeRecipe = async (req, res) => {
   const { originalRecipe, customizationOption } = req.body;
 
@@ -42,20 +46,23 @@ exports.customizeRecipe = async (req, res) => {
   const rewriteEndpointUrl = `${HF_SPACE_BASE_URL}/rewrite/`;
 
   try {
-    const payload = { recipe: originalRecipe, user_instruction: userInstruction };
-    const response = await axios.post(rewriteEndpointUrl, payload, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 90000,
-    });
+    const response = await axios.post(
+      rewriteEndpointUrl,
+      { recipe: originalRecipe, user_instruction: userInstruction },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 90000,
+      }
+    );
 
     const hfData = response.data;
 
     if (hfData && Array.isArray(hfData.rewritten_recipe)) {
-      const formattedCustomizedRecipe = hfData.rewritten_recipe
-        .map((step, index) => `${index + 1}. ${step.trim()}`)
+      const formattedRecipe = hfData.rewritten_recipe
+        .map((step, idx) => `${idx + 1}. ${step.trim()}`)
         .join('\n');
 
-      return res.status(200).json({ customizedRecipe: formattedCustomizedRecipe });
+      return res.status(200).json({ customizedRecipe: formattedRecipe });
     }
 
     return res.status(500).json({ message: "Unexpected response from AI service. Please check Hugging Face logs." });
@@ -73,12 +80,15 @@ exports.customizeRecipe = async (req, res) => {
   }
 };
 
-// Handles user message, sends it to the AI, saves conversation to DB
+/**
+ * POST /chat
+ * Handles a user message, sends it to Hugging Face, saves to DB, and returns the response.
+ */
 exports.handleChat = async (req, res) => {
   const { message, history } = req.body;
   const userId = req.user.id;
 
-  if (!userId) return res.status(401).json({ error: 'Authentication required or invalid user.' });
+  if (!userId) return res.status(401).json({ error: 'Authentication required.' });
   if (!message) return res.status(400).json({ error: 'Message is required.' });
 
   try {
@@ -96,13 +106,14 @@ exports.handleChat = async (req, res) => {
 
     const assistantReply = hfResponse.data.reply;
 
-    if (typeof assistantReply !== 'string' || assistantReply.trim() === '') {
+    if (!assistantReply || typeof assistantReply !== 'string') {
       return res.status(500).json({ error: 'AI service returned an invalid or empty response.' });
     }
 
     await ChatModel.saveChatMessage(userId, assistantReply, 'assistant');
-    const updatedHistoryFromDb = await ChatModel.getChatHistory(userId);
-    res.status(200).json({ reply: assistantReply, history: updatedHistoryFromDb });
+    const updatedHistory = await ChatModel.getChatHistory(userId);
+
+    res.status(200).json({ reply: assistantReply, history: updatedHistory });
 
   } catch (error) {
     if (error.response) {
@@ -113,12 +124,15 @@ exports.handleChat = async (req, res) => {
     } else if (error.request) {
       return res.status(504).json({ error: "AI service is unreachable or timed out." });
     } else {
-      return res.status(500).json({ error: `Internal server error: ${error.message}`, details: error });
+      return res.status(500).json({ error: `Internal server error: ${error.message}` });
     }
   }
 };
 
-// Retrieves chat history for the authenticated user
+/**
+ * GET /chat-history
+ * Retrieves the authenticated user's chat history.
+ */
 exports.getChatHistory = async (req, res) => {
   const userId = req.user.id;
 
@@ -127,5 +141,80 @@ exports.getChatHistory = async (req, res) => {
     res.status(200).json({ history });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load chat history.', details: error.message });
+  }
+};
+
+/**
+ * POST /generate-shopping-list
+ * Generates a shopping list based on dish names via AI and saves it.
+ */
+exports.generateShoppingList = async (req, res) => {
+  const { dishNames } = req.body;
+  const userId = req.user.id;
+
+  if (!userId) return res.status(401).json({ error: 'Authentication required.' });
+  if (!Array.isArray(dishNames) || dishNames.length === 0) {
+    return res.status(400).json({ error: 'Please provide an array of dish names.' });
+  }
+
+  const shoppingEndpointUrl = `${HF_SPACE_BASE_URL}/shopping/`;
+
+  try {
+    const hfResponse = await axios.post(
+      shoppingEndpointUrl,
+      { dishes: dishNames },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 120000,
+      }
+    );
+
+    const generatedList = hfResponse.data.shopping_list;
+
+    if (!generatedList || typeof generatedList !== 'string') {
+      return res.status(500).json({ error: 'AI service returned an invalid or empty shopping list.' });
+    }
+
+    const savedList = await ShoppingListModel.saveShoppingList(userId, generatedList);
+    res.status(200).json({ shoppingList: generatedList, savedListId: savedList.id });
+
+  } catch (error) {
+    if (error.response) {
+      res.status(error.response.status).json({
+        error: error.response.data.detail || `AI service error: ${error.response.status}`,
+        details: error.response.data,
+      });
+    } else if (error.request) {
+      res.status(504).json({ error: "AI shopping list service is unreachable or timed out." });
+    } else {
+      res.status(500).json({ error: `Request setup failed: ${error.message}` });
+    }
+  }
+};
+
+/**
+ * GET /shopping-list
+ * Retrieves the latest shopping list generated for the authenticated user.
+ */
+exports.getShoppingList = async (req, res) => {
+  const userId = req.user.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  try {
+    const latestList = await ShoppingListModel.getLatestShoppingList(userId);
+    if (!latestList) {
+      return res.status(404).json({ message: 'No shopping list found for this user.' });
+    }
+
+    res.status(200).json({
+      shoppingList: latestList.items,
+      generatedAt: latestList.generated_at,
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load shopping list.', details: error.message });
   }
 };

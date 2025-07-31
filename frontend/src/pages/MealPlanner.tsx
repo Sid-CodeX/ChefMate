@@ -1,111 +1,274 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, ChefHat, ShoppingCart, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Calendar, ChefHat, ShoppingCart, Plus, XCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { mealPlannerService } from '@/services/mealPlannerService';
+import RecipeSearchModal from "@/components/RecipeSearchModal";
+
+interface PlannedMeal {
+  id: number;
+  day_of_week: string;
+  meal_slot: string;
+  recipe_id: number;
+  recipe_name: string;
+  prep_time: string;
+  cook_time: string;
+}
+
+interface FormattedMealPlan {
+  [day: string]: {
+    breakfast: { name: string; prep: string; recipeId: number; planId: number } | null;
+    lunch: { name: string; prep: string; recipeId: number; planId: number } | null;
+    dinner: { name: string; prep: string; recipeId: number; planId: number } | null;
+  };
+}
+
+interface RecipeForSelection {
+  id: number;
+  name: string;
+  prep_time: string;
+  image_url?: string;
+}
 
 const MealPlanner = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const mealTypes = ["breakfast", "lunch", "dinner"];
 
-  const [mealPlan, setMealPlan] = useState({
-    Monday: {
-      breakfast: { name: "Overnight Oats", prep: "5 min" },
-      lunch: { name: "Caesar Salad", prep: "15 min" },
-      dinner: { name: "Grilled Salmon", prep: "25 min" }
-    },
-    Tuesday: {
-      breakfast: { name: "Avocado Toast", prep: "10 min" },
-      lunch: null,
-      dinner: { name: "Pasta Carbonara", prep: "20 min" }
-    },
-    Wednesday: {
-      breakfast: { name: "Greek Yogurt Bowl", prep: "5 min" },
-      lunch: { name: "Quinoa Buddha Bowl", prep: "30 min" },
-      dinner: null
-    },
-    Thursday: {
-      breakfast: null,
-      lunch: { name: "Turkey Sandwich", prep: "10 min" },
-      dinner: { name: "Stir Fry Vegetables", prep: "20 min" }
-    },
-    Friday: {
-      breakfast: { name: "Smoothie Bowl", prep: "10 min" },
-      lunch: { name: "Chicken Wrap", prep: "15 min" },
-      dinner: { name: "Pizza Night", prep: "45 min" }
-    },
-    Saturday: {
-      breakfast: { name: "Pancakes", prep: "20 min" },
-      lunch: { name: "Soup & Salad", prep: "25 min" },
-      dinner: { name: "BBQ Ribs", prep: "3 hours" }
-    },
-    Sunday: {
-      breakfast: { name: "French Toast", prep: "15 min" },
-      lunch: { name: "Leftover Ribs", prep: "5 min" },
-      dinner: { name: "Meal Prep Sunday", prep: "2 hours" }
+  const [mealPlan, setMealPlan] = useState<FormattedMealPlan>({});
+  const [isLoadingPlan, setIsLoadingPlan] = useState(true);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [isGeneratingList, setIsGeneratingList] = useState(false);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [currentSlotForSelection, setCurrentSlotForSelection] = useState<{ day: string; mealType: string } | null>(null);
+
+  const fetchWeeklyPlan = async () => {
+    if (!user?.token) {
+      setPlanError("Please log in to view your meal plan.");
+      setIsLoadingPlan(false);
+      setMealPlan({});
+      return;
     }
-  });
+
+    setIsLoadingPlan(true);
+    setPlanError(null);
+    try {
+      const fetchedPlan = await mealPlannerService.getWeeklyPlan(user.token);
+      const formatted: FormattedMealPlan = {};
+      weekDays.forEach(day => {
+        formatted[day] = { breakfast: null, lunch: null, dinner: null };
+      });
+
+      fetchedPlan.forEach(item => {
+        if (formatted[item.day_of_week] && mealTypes.includes(item.meal_slot)) {
+          formatted[item.day_of_week][item.meal_slot as keyof FormattedMealPlan['Monday']] = {
+            name: item.recipe_name,
+            prep: item.prep_time || "N/A min",
+            recipeId: item.recipe_id,
+            planId: item.id,
+          };
+        }
+      });
+
+      setMealPlan(formatted);
+    } catch (err: any) {
+      setPlanError(err.message || "Failed to load weekly plan.");
+      toast({ title: "Error", description: err.message || "Failed to load weekly plan.", variant: "destructive" });
+    } finally {
+      setIsLoadingPlan(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeeklyPlan();
+  }, [user?.token]);
+
+  const handleGenerateShoppingList = async () => {
+    if (!user?.token) {
+      toast({ title: "Login Required", description: "Please log in to generate a shopping list.", variant: "destructive" });
+      return;
+    }
+
+    const meals = Object.values(mealPlan).flatMap(day => Object.values(day).filter(Boolean));
+    if (meals.length === 0) {
+      toast({ title: "No Meals Planned", description: "Please add recipes before generating a shopping list.", variant: "info" });
+      return;
+    }
+
+    setIsGeneratingList(true);
+    try {
+      await mealPlannerService.generateShoppingList(user.token);
+      toast({ title: "Success", description: "Shopping list generated.", variant: "success" });
+      navigate('/shopping-list');
+    } catch (error: any) {
+      toast({ title: "Generation Failed", description: error.message || "Please try again later.", variant: "destructive" });
+    } finally {
+      setIsGeneratingList(false);
+    }
+  };
+
+  const handleOpenRecipeModal = (day: string, mealType: string) => {
+    if (!user) {
+      toast({ title: "Login Required", description: "Please log in to modify your meal plan.", variant: "destructive" });
+      return;
+    }
+    setCurrentSlotForSelection({ day, mealType });
+    setIsRecipeModalOpen(true);
+  };
+
+  const handleRecipeSelected = async (selectedRecipe: RecipeForSelection) => {
+    if (!currentSlotForSelection || !user?.token) return;
+
+    const { day, mealType } = currentSlotForSelection;
+    setIsRecipeModalOpen(false);
+    setIsLoadingPlan(true);
+
+    try {
+      const response = await mealPlannerService.saveMealToPlan(day, mealType, selectedRecipe.id, user.token);
+      const formatted: FormattedMealPlan = {};
+      weekDays.forEach(d => {
+        formatted[d] = { breakfast: null, lunch: null, dinner: null };
+      });
+      response.plan.forEach((item: PlannedMeal) => {
+        if (formatted[item.day_of_week] && mealTypes.includes(item.meal_slot)) {
+          formatted[item.day_of_week][item.meal_slot as keyof FormattedMealPlan['Monday']] = {
+            name: item.recipe_name,
+            prep: item.prep_time || "N/A min",
+            recipeId: item.recipe_id,
+            planId: item.id,
+          };
+        }
+      });
+
+      setMealPlan(formatted);
+      toast({ title: "Meal Added", description: `${selectedRecipe.name} added to ${day} ${mealType}.`, variant: "success" });
+    } catch (error: any) {
+      toast({ title: "Failed to Add", description: error.message || "Unable to update plan.", variant: "destructive" });
+    } finally {
+      setIsLoadingPlan(false);
+      setCurrentSlotForSelection(null);
+    }
+  };
+
+  const handleRemoveMeal = async (day: string, mealType: string) => {
+    if (!user?.token) {
+      toast({ title: "Login Required", description: "Please log in to modify your meal plan.", variant: "destructive" });
+      return;
+    }
+
+    setIsLoadingPlan(true);
+    try {
+      const response = await mealPlannerService.deleteMealFromPlan(day, mealType, user.token);
+      const formatted: FormattedMealPlan = {};
+      weekDays.forEach(d => {
+        formatted[d] = { breakfast: null, lunch: null, dinner: null };
+      });
+      response.plan.forEach((item: PlannedMeal) => {
+        if (formatted[item.day_of_week] && mealTypes.includes(item.meal_slot)) {
+          formatted[item.day_of_week][item.meal_slot as keyof FormattedMealPlan['Monday']] = {
+            name: item.recipe_name,
+            prep: item.prep_time || "N/A min",
+            recipeId: item.recipe_id,
+            planId: item.id,
+          };
+        }
+      });
+
+      setMealPlan(formatted);
+      toast({ title: "Meal Removed", description: `Removed from ${day} ${mealType}.`, variant: "success" });
+    } catch (error: any) {
+      toast({ title: "Failed to Remove", description: error.message || "Unable to update plan.", variant: "destructive" });
+    } finally {
+      setIsLoadingPlan(false);
+    }
+  };
 
   const getMealTypeColor = (mealType: string) => {
     switch (mealType) {
       case "breakfast": return "bg-orange-100 text-orange-700 border-orange-300";
-      case "lunch": return "bg-green-100 text-green-700 border-green-300"; 
+      case "lunch": return "bg-green-100 text-green-700 border-green-300";
       case "dinner": return "bg-blue-100 text-blue-700 border-blue-300";
       default: return "bg-gray-100 text-gray-700 border-gray-300";
     }
   };
 
+  if (isLoadingPlan) {
+    return <div className="text-center py-12 text-white">Loading meal plan...</div>;
+  }
+
+  if (planError) {
+    return (
+      <div className="text-center py-12 text-red-400">
+        <p>Error: {planError}</p>
+        <Button onClick={fetchWeeklyPlan} className="mt-4">Retry</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Meal Planner 📅
-        </h1>
-        <p className="text-gray-400">
-          Plan your weekly meals and generate shopping lists.
-        </p>
+        <h1 className="text-3xl font-bold text-white mb-2">Meal Planner</h1>
+        <p className="text-gray-400">Plan your weekly meals and generate shopping lists.</p>
       </div>
 
-      {/* Generate Shopping List Button */}
       <div className="flex justify-center mb-6">
-        <Link to="/shopping-list">
-          <Button className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 text-lg">
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            🛒 Generate Shopping List
-          </Button>
-        </Link>
+        <Button
+          onClick={handleGenerateShoppingList}
+          disabled={isGeneratingList || !user}
+          className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 text-lg"
+        >
+          <ShoppingCart className="h-5 w-5 mr-2" />
+          {isGeneratingList ? "Generating..." : "Generate Shopping List"}
+        </Button>
       </div>
 
-      {/* Weekly Meal Grid */}
       <Card className="bg-[#2c2c3d] border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-white">
             <Calendar className="h-5 w-5 text-blue-500" />
-            <span>This Week's Meal Plan</span>
+            <span>Weekly Meal Plan</span>
           </CardTitle>
-          <CardDescription className="text-gray-400">
-            Click on empty slots to add meals or use the search bar to find recipes
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-            {weekDays.map((day) => (
+            {weekDays.map(day => (
               <div key={day} className="border rounded-lg p-3 bg-white">
                 <div className="text-center mb-3">
                   <h3 className="font-semibold text-gray-900 text-sm">{day}</h3>
                 </div>
-                
                 <div className="space-y-2">
-                  {mealTypes.map((mealType) => {
-                    const meal = mealPlan[day as keyof typeof mealPlan][mealType as keyof typeof mealPlan.Monday];
+                  {mealTypes.map(mealType => {
+                    const meal = mealPlan[day]?.[mealType as keyof FormattedMealPlan['Monday']];
                     return (
-                      <div key={mealType} className="min-h-[60px] border-2 border-dashed border-gray-200 rounded p-2 hover:border-gray-300 transition-colors cursor-pointer">
+                      <div
+                        key={mealType}
+                        className="min-h-[60px] border-2 border-dashed border-gray-200 rounded p-2 hover:border-gray-300 cursor-pointer relative"
+                        onClick={() => handleOpenRecipeModal(day, mealType)}
+                      >
                         {meal ? (
-                          <div className={`p-2 rounded text-xs ${getMealTypeColor(mealType)}`}>
-                            <div className="font-medium truncate">{meal.name}</div>
-                            <div className="text-xs opacity-75">⏱️ {meal.prep}</div>
+                          <div className={`p-2 rounded text-xs ${getMealTypeColor(mealType)} flex justify-between items-center`}>
+                            <div>
+                              <div className="font-medium truncate">{meal.name}</div>
+                              <div className="text-xs opacity-75">⏱ {meal.prep}</div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 absolute top-0 right-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveMeal(day, mealType);
+                              }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           </div>
                         ) : (
                           <div className="h-full flex items-center justify-center text-gray-400 text-xs hover:text-gray-600">
@@ -123,7 +286,6 @@ const MealPlanner = () => {
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
       <Card className="bg-[#2c2c3d] border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-white">
@@ -134,20 +296,25 @@ const MealPlanner = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" className="p-6 h-auto flex-col space-y-2">
-              <div className="text-2xl">🔍</div>
               <span>Search Recipes</span>
             </Button>
             <Button variant="outline" className="p-6 h-auto flex-col space-y-2">
-              <div className="text-2xl">📋</div>
               <span>Copy Last Week</span>
             </Button>
             <Button variant="outline" className="p-6 h-auto flex-col space-y-2">
-              <div className="text-2xl">🎲</div>
               <span>Random Meals</span>
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {isRecipeModalOpen && (
+        <RecipeSearchModal
+          isOpen={isRecipeModalOpen}
+          onClose={() => setIsRecipeModalOpen(false)}
+          onSelectRecipe={handleRecipeSelected}
+        />
+      )}
     </div>
   );
 };

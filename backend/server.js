@@ -13,6 +13,7 @@ const favoritesRoutes = require("./routes/favoritesRoutes");
 const badgesRoutes = require("./routes/badgesRoutes");
 const recipesRoutes = require("./routes/recipesRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const mealPlannerRoutes = require('./routes/mealPlannerRoutes'); 
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use("/api/favorites", favoritesRoutes);
 app.use("/api/badges", badgesRoutes);
 app.use("/api/recipes", recipesRoutes);
 app.use("/api/ai", aiRoutes);
+app.use('/api/planner', mealPlannerRoutes);
 
 // Health check route
 app.get("/", (req, res) => {

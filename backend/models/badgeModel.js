@@ -9,7 +9,7 @@ exports.hasBadge = async (userId, badgeName) => {
   return res.rowCount > 0;
 };
 
-// Utility: Manually award a badge (rare case - like admin assignment)
+// Utility: Manually award a badge (e.g. admin)
 exports.awardBadge = async (userId, badgeName) => {
   await pool.query(
     `INSERT INTO user_badges (user_id, badge_name)
@@ -19,7 +19,7 @@ exports.awardBadge = async (userId, badgeName) => {
   );
 };
 
-// Utility: Get raw badges without metadata (not usually used anymore)
+// Internal: Get raw badges (used internally)
 exports.getUserBadges = async (userId) => {
   const res = await pool.query(
     `SELECT badge_name, earned_at FROM user_badges WHERE user_id = $1`,

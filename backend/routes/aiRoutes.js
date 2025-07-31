@@ -25,8 +25,18 @@ router.post('/chat', authMiddleware, aiController.handleChat);
  */
 router.get('/chat/history', authMiddleware, aiController.getChatHistory);
 
+/**
+ * @route   POST /api/ai/generate-shopping-list
+ * @desc    Generate a shopping list from a list of dish names using AI
+ * @access  Protected (requires authentication)
+ */
+router.post('/generate-shopping-list', authMiddleware, aiController.generateShoppingList);
 
-// Future AI-related routes can be added here:
-// router.post('/generate-shopping-list', authMiddleware, aiController.generateShoppingList); // Convert recipe into ingredients list, also protected
+/**
+ * @route   GET /api/ai/shopping-list
+ * @desc    Retrieve the latest generated shopping list for the logged-in user
+ * @access  Protected (requires authentication)
+ */
+router.get('/shopping-list', authMiddleware, aiController.getShoppingList);
 
 module.exports = router;

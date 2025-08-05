@@ -38,17 +38,15 @@ Prep: 10 min | Cook: 15 min | Serves: 4`;
  */
 const RecipeCustomizer = () => {
   const { toast } = useToast();
-  const { user } = useAuth(); // Get current user (used if API requires auth)
+  const { user } = useAuth();
   const location = useLocation();
 
-  // State for recipe input, output, and mode toggles
   const [originalRecipe, setOriginalRecipe] = useState(DEFAULT_SAMPLE_RECIPE);
   const [customizedRecipe, setCustomizedRecipe] = useState("");
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [showCookingMode, setShowCookingMode] = useState(false);
   const [cookingSteps, setCookingSteps] = useState<string[]>([]);
 
-  // Load recipe content passed via route state (e.g., from dashboard)
   useEffect(() => {
     if (location.state && (location.state as any).originalRecipeContent) {
       const { originalRecipeContent, originalRecipeName } = location.state as any;
@@ -62,7 +60,6 @@ const RecipeCustomizer = () => {
     }
   }, [location.state, toast]);
 
-  // Customization options shown as buttons
   const customizationOptions = [
     { label: "Make it Vegan 🌱", description: "Replace animal products with plant-based alternatives", param: "vegan", defaultBg: "bg-green-600/10", defaultBorder: "border-green-500", defaultText: "text-green-300" },
     { label: "Reduce Calories 📉", description: "Lower calorie version with lighter ingredients", param: "low-calorie", defaultBg: "bg-blue-600/10", defaultBorder: "border-blue-500", defaultText: "text-blue-300" },
@@ -71,11 +68,10 @@ const RecipeCustomizer = () => {
     { label: "High Protein 💪", description: "Boost protein content for fitness goals", param: "high-protein", defaultBg: "bg-red-600/10", defaultBorder: "border-red-500", defaultText: "text-red-300" },
     { label: "Kid-Friendly 👶", description: "Make it appealing and safe for children", param: "kid-friendly", defaultBg: "bg-pink-600/10", defaultBorder: "border-pink-500", defaultText: "text-pink-300" },
     { label: "General Rewrite ✍️", description: "Get a new version with improved clarity or style", param: "general", defaultBg: "bg-gray-800", defaultBorder: "border-gray-500", defaultText: "text-gray-200" },
+    { label: "Low-Carb 🍞🚫", description: "Reduce carb count by replacing starchy ingredients", param: "low-carb", defaultBg: "bg-yellow-600/10", defaultBorder: "border-yellow-500", defaultText: "text-yellow-300" },
+    { label: "Spice it Up 🔥", description: "Add a spicy kick and enhance the flavor profile", param: "spicy", defaultBg: "bg-red-600/10", defaultBorder: "border-red-500", defaultText: "text-red-300" },
   ];
 
-  /**
-   * Sends the recipe and customization option to the backend for AI processing.
-   */
   const handleCustomize = async (optionParam: string) => {
     if (!originalRecipe.trim()) {
       toast({
@@ -94,12 +90,8 @@ const RecipeCustomizer = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${user?.token}`, // Uncomment if backend requires auth
         },
-        body: JSON.stringify({
-          originalRecipe,
-          customizationOption: optionParam,
-        }),
+        body: JSON.stringify({ originalRecipe, customizationOption: optionParam }),
       });
 
       const data = await response.json();
@@ -129,9 +121,6 @@ const RecipeCustomizer = () => {
     }
   };
 
-  /**
-   * Parses and extracts steps from the customized recipe for cooking mode.
-   */
   const handleStartCooking = () => {
     const steps = customizedRecipe
       .split('\n')
@@ -157,7 +146,7 @@ const RecipeCustomizer = () => {
       <p className="text-gray-300 mb-8">Transform any recipe to match your dietary needs, preferences, or time constraints.</p>
 
       <div className="max-w-4xl space-y-8">
-        {/* Recipe input section */}
+        {/* Recipe input */}
         <Card className="bg-[#2a2f45] border-gray-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center space-x-2">📝 <span>Original Recipe</span></CardTitle>
@@ -174,7 +163,7 @@ const RecipeCustomizer = () => {
           </CardContent>
         </Card>
 
-        {/* Customization options */}
+        {/* Customization Options */}
         <Card className="bg-[#2a2f45] border-gray-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center space-x-2">✨ <span>Choose Your Transformation</span></CardTitle>
@@ -186,21 +175,20 @@ const RecipeCustomizer = () => {
                 <Button
                   key={option.param}
                   variant="outline"
-                  className={`h-auto p-6 text-left ${option.defaultBg} ${option.defaultBorder} ${option.defaultText}
-                            hover:bg-orange-500/30 hover:text-white hover:border-orange-500/80
-                            ${isCustomizing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`h-full w-full p-4 flex flex-col justify-center items-center text-center whitespace-normal
+                    ${option.defaultBg} ${option.defaultBorder} ${option.defaultText}
+                    hover:bg-orange-500/30 hover:text-white hover:border-orange-500/80
+                    ${isCustomizing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => handleCustomize(option.param)}
                   disabled={isCustomizing}
                 >
-                  <div>
-                    <div className="font-semibold text-base mb-2">{option.label}</div>
-                    <div className="text-sm text-gray-400">{option.description}</div>
-                  </div>
+                  <div className="font-semibold text-base mb-1">{option.label}</div>
+                  <div className="text-sm text-gray-400">{option.description}</div>
                 </Button>
               ))}
             </div>
 
-            {/* Loading spinner */}
+            {/* Loading Spinner */}
             {isCustomizing && (
               <div className="mt-8 text-center">
                 <div className="animate-spin h-8 w-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -211,7 +199,7 @@ const RecipeCustomizer = () => {
           </CardContent>
         </Card>
 
-        {/* Customized output */}
+        {/* Customized Recipe */}
         {customizedRecipe && (
           <Card className="border-2 border-green-500 bg-[#2a2f45] shadow-lg shadow-green-500/20">
             <CardHeader className="bg-gradient-to-r from-green-500/10 to-transparent">
@@ -222,15 +210,8 @@ const RecipeCustomizer = () => {
               <div className="bg-[#1e1e2f] p-6 rounded-lg border border-gray-600">
                 <pre className="whitespace-pre-wrap text-sm font-mono text-gray-300">{customizedRecipe}</pre>
               </div>
-
-              {/* Action buttons */}
               <div className="flex flex-wrap gap-3">
-                <Button 
-                  onClick={handleStartCooking}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-lg font-medium"
-                >
-                  🍳 Start Cooking
-                </Button>
+                <Button onClick={handleStartCooking} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-lg font-medium">🍳 Start Cooking</Button>
                 <Button variant="outline" className="border-gray-600 text-gray-300 px-6 py-3" disabled>💾 Save Recipe</Button>
                 <Button variant="outline" className="border-gray-600 text-gray-300 px-6 py-3" disabled>📤 Share Recipe</Button>
               </div>
@@ -239,12 +220,12 @@ const RecipeCustomizer = () => {
         )}
       </div>
 
-      {/* Cooking step-by-step display */}
+      {/* Cooking Mode */}
       {showCookingMode && (
         <React.Suspense fallback={<div>Loading cooking mode...</div>}>
-          <CookingBox 
+          <CookingBox
             steps={cookingSteps}
-            totalCookTime={25} // Ideally should be parsed from recipe
+            totalCookTime={25}
             title="AI Customized Recipe"
             onExit={() => setShowCookingMode(false)}
           />

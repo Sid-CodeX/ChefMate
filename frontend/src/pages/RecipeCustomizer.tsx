@@ -82,6 +82,15 @@ const RecipeCustomizer = () => {
       return;
     }
 
+    if (!user || !user.token) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to use the recipe customizer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCustomizing(true);
     setCustomizedRecipe("");
 
@@ -90,6 +99,7 @@ const RecipeCustomizer = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`,
         },
         body: JSON.stringify({ originalRecipe, customizationOption: optionParam }),
       });

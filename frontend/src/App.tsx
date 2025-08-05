@@ -1,4 +1,3 @@
-
 import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -13,7 +12,7 @@ import LoadingSpinner from "./components/LoadingSpinner";
 const Landing = React.lazy(() => import("./pages/Landing"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const RecipeCustomizer = React.lazy(() => import("./pages/RecipeCustomizer"));
-const Gamification = React.lazy(() => import("./pages/Gamification"));
+// const Gamification = React.lazy(() => import("./pages/Gamification")); // Removed
 const MealPlanner = React.lazy(() => import("./pages/MealPlanner"));
 const ChiefMateChat = React.lazy(() => import("./pages/ChiefMateChat"));
 const ShoppingList = React.lazy(() => import("./pages/ShoppingList"));
@@ -75,7 +74,7 @@ const AppRoutes = () => (
       <Route path="/recipe/:id" element={<ProtectedRoute><RecipeDetail /></ProtectedRoute>} />
       <Route path="/recipe-customizer" element={<ProtectedRoute><RecipeCustomizer /></ProtectedRoute>} />
       <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
-      <Route path="/gamification" element={<ProtectedRoute><Gamification /></ProtectedRoute>} />
+      {/* <Route path="/gamification" element={<ProtectedRoute><Gamification /></ProtectedRoute>} /> */}
       <Route path="/meal-planner" element={<ProtectedRoute><MealPlanner /></ProtectedRoute>} />
       <Route path="/chiefmate" element={<ProtectedRoute><ChiefMateChat /></ProtectedRoute>} />
       <Route path="/shopping-list" element={<ProtectedRoute><ShoppingList /></ProtectedRoute>} />

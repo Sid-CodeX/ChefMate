@@ -1,19 +1,13 @@
-// React & Routing
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-
-// UI Components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, ChefHat, MapPin, Utensils, Share2, Sparkles } from "lucide-react";
 import CookingBox from "@/components/CookingBox";
-
-// Hooks & Types
 import { useToast } from "@/hooks/use-toast";
 import { Recipe } from '@/types/recipe';
 
-// Constants
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const FALLBACK_IMAGE_URL = '/placeholder.svg';
 
@@ -253,7 +247,7 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
       <Card className="bg-[#2c2f3d] border-gray-700">
         <div className="relative">
           <img
-            src={recipe.img_url || FALLBACK_IMAGE_URL}
+            src={recipe.image_url || FALLBACK_IMAGE_URL}
             alt={recipe.name}
             className="w-full h-64 md:h-80 object-cover rounded-t-lg"
           />

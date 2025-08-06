@@ -19,13 +19,6 @@ router.post('/customize-recipe', authMiddleware, aiController.customizeRecipe);
 router.post('/chat', authMiddleware, aiController.handleChat);
 
 /**
- * @route   GET /api/ai/chat/history
- * @desc    Retrieve the chat history for the logged-in user
- * @access  Protected (requires authentication)
- */
-router.get('/chat/history', authMiddleware, aiController.getChatHistory);
-
-/**
  * @route   POST /api/ai/generate-shopping-list
  * @desc    Generate a shopping list from a list of dish names using AI
  * @access  Protected (requires authentication)

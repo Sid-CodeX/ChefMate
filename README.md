@@ -4,23 +4,23 @@
 
 -----
 
-### 🚀 Live Demo & Project Showcase
+### Live Demo & Project Showcase
 
-  * **Live Application**: [https://chefmate-aiapp.vercel.app/](https://www.google.com/search?q=https://chefmate-aiapp.vercel.app/)
+  * **Live Application**: [ChefMate](https://chefmate-aiapp.vercel.app/)
 
 -----
 
-### 💡 Key Features & Differentiators
+### Key Features & Differentiators
 
   * **Intelligent Meal Planning**: A dynamic weekly calendar that allows users to effortlessly add, remove, and randomize meals. The user's meal plan state is persisted in a database, providing a seamless experience.
-  * **AI-Powered Shopping List Generation** 🛒: An innovative feature that analyzes all planned meals and generates a consolidated, categorized shopping list. This eliminates the manual effort of creating grocery lists and ensures no ingredient is forgotten.
-  * **AI Recipe Customization** 🧠: Users can modify any recipe based on specific dietary preferences (e.g., vegan, gluten-free) or cooking goals (e.g., quick-prep, high-protein). This is powered by an external AI service.
+  * **AI-Powered Shopping List Generation** : An innovative feature that analyzes all planned meals and generates a consolidated, categorized shopping list. This eliminates the manual effort of creating grocery lists and ensures no ingredient is forgotten.
+  * **AI Recipe Customization** : Users can modify any recipe based on specific dietary preferences (e.g., vegan, gluten-free) or cooking goals (e.g., quick-prep, high-protein). This is powered by an external AI service.
   * **Interactive AI Chat Assistant**: A dedicated chatbot, ChiefMate, provides real-time cooking advice and answers culinary questions, acting as a conversational kitchen companion.
   * **Robust User Authentication**: A secure and modern authentication system allows users to have personalized and private meal plans.
 
 -----
 
-### 🏛️ Architecture
+### Architecture
 
 ChefMate is designed with a **microservices-oriented architecture** that separates core application logic from specialized AI functionalities. This approach ensures scalability, modularity, and maintainability.
 
@@ -34,7 +34,7 @@ The endpoint for the AI service is:
 
 -----
 
-### 💻 Technology Stack
+### Technology Stack
 
 ChefMate is built on a modern and robust full-stack architecture, demonstrating proficiency in both frontend and backend development.
 
@@ -109,7 +109,7 @@ The application should now be running locally and accessible at `http://localhos
 
 -----
 
-### 🗺️ Roadmap & Future Scope
+### Roadmap & Future Scope
 
 This project is a functional MVP with a clear path for future enhancements:
 
@@ -119,10 +119,10 @@ This project is a functional MVP with a clear path for future enhancements:
 
 -----
 
-### 👨‍💻 Author
+### Author
 
 **Sidharth**
 
-  * **GitHub**: [https://github.com/Sid-CodeX](https://www.google.com/search?q=https://github.com/Sid-CodeX)
-  * **LinkedIn**: [https://www.linkedin.com/in/sidharth-p-7b0097257/](https://www.google.com/search?q=https://www.linkedin.com/in/sidharth-p-7b0097257/)
-  * **Portfolio**: [https://sid-codex.vercel.app/](https://www.google.com/search?q=https://id-codex.vercel.app/)
+  * [**GitHub**](https://github.com/Sid-CodeX)
+  * [**LinkedIn**](https://www.linkedin.com/in/sidharth-p-7b0097257/)
+  * [**Portfolio**](https://sid-codex.vercel.app/)

@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChefHat, CookingPot, Trophy, Calendar, Heart, Menu, X, MessageCircle } from "lucide-react";
+import { ChefHat, CookingPot, Calendar, Heart, Menu, X, MessageCircle } from "lucide-react";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -12,7 +11,7 @@ const Sidebar = () => {
     { icon: <ChefHat className="h-5 w-5" />, label: "Dashboard", path: "/dashboard" },
     { icon: <CookingPot className="h-5 w-5" />, label: "AI Rewriter", path: "/recipe-customizer" },
     { icon: <Heart className="h-5 w-5" />, label: "Favorites", path: "/favorites" },
-    { icon: <Trophy className="h-5 w-5" />, label: "Achievements", path: "/gamification" },
+    // { icon: <Trophy className="h-5 w-5" />, label: "Achievements", path: "/gamification" },
     { icon: <Calendar className="h-5 w-5" />, label: "Meal Planner", path: "/meal-planner" },
     { icon: <MessageCircle className="h-5 w-5" />, label: "ChiefMate Chat", path: "/chiefmate" },
   ];

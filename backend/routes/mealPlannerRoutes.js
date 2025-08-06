@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mealPlannerController = require('../controllers/mealPlannerController');
-const { authMiddleware } = require('../middlewares/authMiddleware'); 
+const { authMiddleware } = require('../middlewares/authMiddleware');
 
 /**
  * @route GET /api/planner/weekly-plan
@@ -23,6 +23,14 @@ router.post('/weekly-plan/meal', authMiddleware, mealPlannerController.saveMealT
  * @access Protected
  */
 router.delete('/weekly-plan/meal', authMiddleware, mealPlannerController.deleteMealFromPlan);
+
+/**
+ * @route POST /api/planner/random-meals
+ * @desc Fill empty meal plan slots with random recipes
+ * @access Protected
+ */
+router.post('/random-meals', authMiddleware, mealPlannerController.randomizeMealPlan); // New route
+
 
 /**
  * @route POST /api/planner/generate-shopping-list

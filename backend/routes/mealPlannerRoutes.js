@@ -11,14 +11,24 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 router.get('/weekly-plan', authMiddleware, mealPlannerController.getWeeklyPlan);
 
 /**
+ * @route POST /api/planner/weekly-plan/meal
+ * @desc Add or update a meal plan entry
+ * @access Protected
+ */
+router.post('/weekly-plan/meal', authMiddleware, mealPlannerController.saveMealToPlan);
+
+/**
+ * @route DELETE /api/planner/weekly-plan/meal
+ * @desc Delete a meal plan entry
+ * @access Protected
+ */
+router.delete('/weekly-plan/meal', authMiddleware, mealPlannerController.deleteMealFromPlan);
+
+/**
  * @route POST /api/planner/generate-shopping-list
  * @desc Generate a shopping list based on the current weekly plan
  * @access Protected
  */
 router.post('/generate-shopping-list', authMiddleware, mealPlannerController.generateShoppingListFromPlan);
-
-// Add other routes for adding/updating/deleting meals in the plan here later
-// router.post('/add-meal', authMiddleware, mealPlannerController.addMealPlanEntry);
-// router.put('/update-meal/:id', authMiddleware, mealPlannerController.updateMealPlanEntry);
 
 module.exports = router;

@@ -2,14 +2,20 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Response when a new shopping list is generated
 interface ShoppingListResponse {
-  shoppingList: string; // AI-generated formatted list
+  shoppingList: string; 
   savedListId: number;
 }
 
-// Response structure when retrieving the latest saved shopping list
+// Structure of the shopping list content
+interface ShoppingListContent {
+    content: string;
+    dishes: string[];
+}
+
+// Response when fetching the latest shopping list
 interface LatestShoppingListResponse {
-  shoppingList: string;
-  generatedAt: string;  
+    shoppingList: ShoppingListContent; 
+    generatedAt: string;
 }
 
 export const shoppingListService = {
@@ -61,7 +67,7 @@ export const shoppingListService = {
     });
 
     if (response.status === 404) {
-      return null; // No shopping list found
+      return null; 
     }
 
     if (!response.ok) {

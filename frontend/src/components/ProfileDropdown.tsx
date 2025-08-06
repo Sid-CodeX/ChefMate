@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -34,9 +33,7 @@ const ProfileDropdown = () => {
         </Avatar>
         <div className="hidden md:block text-left">
           <p className="text-sm font-medium text-white leading-tight">{user.name}</p>
-          <p className="text-xs text-gray-300">
-            Level {user.level}
-          </p>
+          {/* Removed: <p className="text-xs text-gray-300">Level {user.level}</p> */}
         </div>
         <ChevronDown className="h-4 w-4 text-gray-300 hidden md:block" />
       </DropdownMenuTrigger>
@@ -57,7 +54,7 @@ const ProfileDropdown = () => {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-gray-900 text-sm truncate">{user.name}</p>
-              <p className="text-xs text-gray-500">Level {user.level} Chef</p>
+              {/* Removed: <p className="text-xs text-gray-500">Level {user.level} Chef</p> */}
             </div>
           </div>
         </div>

@@ -1,5 +1,3 @@
-// src/pages/ChiefMateChat.tsx
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +6,7 @@ import { Send, ChefHat, User } from "lucide-react";
 import { chatService } from "@/services/chatService"; 
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import ChatMessages from "@/components/ChatMessages";
 
 interface LLMMessage {
     role: 'user' | 'assistant';
@@ -29,15 +28,6 @@ const ChiefMateChat = () => {
     const [messages, setMessages] = useState<DisplayMessage[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [isTyping, setIsTyping] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
 
     useEffect(() => {
         const initialGreetingContent = "Hello! 👋 I'm ChiefMate, your personal cooking assistant. How can I help you today?";
@@ -104,13 +94,14 @@ const ChiefMateChat = () => {
     };
 
     return (
-        <div className="flex flex-col h-full"> {/* The parent of this component in your layout should have a fixed height */}
+        <div className="flex flex-col h-full max-h-[80vh]"> 
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-white mb-2">👨‍🍳 Talk to ChiefMate</h1>
                 <p className="text-gray-400">Your personal cooking assistant — ask me anything about cooking, recipes, and meal planning!</p>
             </div>
 
-            <Card className="flex-1 bg-[#2c2c3d] border-gray-700 flex flex-col">
+            {/* FIX: Removed flex-1 and added a fixed height to the Card component */}
+            <Card className="bg-[#2c2c3d] border-gray-700 flex flex-col h-[65vh]">
                 <CardHeader className="pb-4">
                     <CardTitle className="flex items-center space-x-2 text-white">
                         <ChefHat className="h-5 w-5 text-orange-500" />
@@ -123,56 +114,7 @@ const ChiefMateChat = () => {
                 </CardHeader>
                 
                 <CardContent className="flex-1 flex flex-col p-0">
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                        {messages.map((message) => (
-                            <div
-                                key={message.id}
-                                className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div className={`flex max-w-[80%] ${message.isUser ? 'flex-row-reverse' : 'flex-row'} items-start space-x-2`}>
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                        message.isUser ? 'bg-blue-500 ml-2' : 'bg-orange-500 mr-2'
-                                    }`}>
-                                        {message.isUser ? (
-                                            <User className="h-4 w-4 text-white" />
-                                        ) : (
-                                            <ChefHat className="h-4 w-4 text-white" />
-                                        )}
-                                    </div>
-                                    <div className={`rounded-lg px-4 py-2 ${
-                                        message.isUser 
-                                            ? 'bg-blue-500 text-white' 
-                                            : 'bg-gray-700 text-gray-100'
-                                    }`}>
-                                        <p className="text-sm">{message.content}</p>
-                                        <p className={`text-xs mt-1 ${
-                                            message.isUser ? 'text-blue-100' : 'text-gray-400'
-                                        }`}>
-                                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-
-                        {isTyping && (
-                            <div className="flex justify-start">
-                                <div className="flex items-start space-x-2">
-                                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
-                                        <ChefHat className="h-4 w-4 text-white" />
-                                    </div>
-                                    <div className="bg-gray-700 rounded-lg px-4 py-2">
-                                        <div className="flex space-x-1">
-                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        <div ref={messagesEndRef} />
-                    </div>
+                    <ChatMessages messages={messages} isTyping={isTyping} />
 
                     <div className="border-t border-gray-700 p-4">
                         <div className="flex space-x-2">

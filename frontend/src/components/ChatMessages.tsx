@@ -1,9 +1,6 @@
-// src/components/ChatMessages.tsx
-
 import React, { useRef, useEffect } from 'react';
 import { ChefHat, User } from 'lucide-react';
 
-// Define the DisplayMessage interface if it's not globally available or imported
 interface DisplayMessage { 
     id: string; 
     role: 'user' | 'assistant';
@@ -20,13 +17,12 @@ interface ChatMessagesProps {
 const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isTyping }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Scroll to bottom whenever messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     return (
-        <div className="flex-1 overflow-y-auto p-6 space-y-4"> {/* This div is now the scrollable area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.map((message) => (
                 <div
                     key={message.id}
@@ -47,7 +43,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isTyping }) => {
                                 ? 'bg-blue-500 text-white' 
                                 : 'bg-gray-700 text-gray-100'
                         }`}>
-                            <p className="text-sm">{message.content}</p>
+                            {/* FIX: Added break-words to handle long content */}
+                            <p className="text-sm break-words">{message.content}</p>
                             <p className={`text-xs mt-1 ${
                                 message.isUser ? 'text-blue-100' : 'text-gray-400'
                             }`}>

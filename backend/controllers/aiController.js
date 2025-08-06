@@ -79,7 +79,7 @@ exports.handleChat = async (req, res) => {
     if (!message) return res.status(400).json({ error: 'Message is required.' });
 
     try {
-        const chatEndpointUrl = `${HF_SPACE_URL}/chat/`;
+        const chatEndpointUrl = `${HF_SPACE_BASE_URL}/chat/`;
         
         // We send only the single message, not the history, to the AI service.
         const hfResponse = await axios.post(

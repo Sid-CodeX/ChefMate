@@ -1,6 +1,6 @@
 const WeeklyPlanModel = require('../models/weeklyPlanModel');
 const ShoppingListModel = require('../models/shoppingListModel');
-const RecipeModel = require('../models/recipeModel'); 
+const RecipeModel = require('../models/recipeModel');
 const axios = require('axios');
 const HF_SPACE_BASE_URL = process.env.HF_SPACE_BASE_URL;
 
@@ -70,7 +70,13 @@ exports.generateShoppingListFromPlan = async (req, res) => {
             return res.status(500).json({ error: 'AI service returned an invalid or empty shopping list.' });
         }
 
-        const savedList = await ShoppingListModel.saveShoppingList(userId, generatedList);
+        // ✨ UPDATED: Wrap the generated list string inside a JSON object
+        const listToSave = {
+            content: generatedList,
+            dishes: dishNames,
+        };
+
+        const savedList = await ShoppingListModel.saveShoppingList(userId, listToSave);
         console.log(`[AI Shopping - Planner] Shopping list saved to DB with ID: ${savedList.id}`);
 
         res.status(200).json({ shoppingList: generatedList, savedListId: savedList.id });
@@ -151,7 +157,6 @@ exports.randomizeMealPlan = async (req, res) => {
     }
 
     try {
-        // Retrieve the current meal plan to identify empty slots
         const currentPlan = await WeeklyPlanModel.getWeeklyPlan(userId);
         const plannedSlots = new Set(currentPlan.map(meal => `${meal.day_of_week}-${meal.meal_slot}`));
 
@@ -159,7 +164,6 @@ exports.randomizeMealPlan = async (req, res) => {
         const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         const mealTypes = ["breakfast", "lunch", "dinner"];
 
-        // Determine which slots are currently empty
         weekDays.forEach(day => {
             mealTypes.forEach(mealType => {
                 if (!plannedSlots.has(`${day}-${mealType}`)) {
@@ -172,21 +176,18 @@ exports.randomizeMealPlan = async (req, res) => {
             return res.status(200).json({ message: 'All meal slots are already filled.', plan: currentPlan });
         }
 
-        // Fetch random recipes from the database to fill the empty slots
         const randomRecipes = await RecipeModel.getRandomRecipes(emptySlots.length);
 
         if (randomRecipes.length < emptySlots.length) {
             return res.status(500).json({ error: 'Not enough recipes in the database to fill all slots.' });
         }
 
-        // Assign random recipes to the empty slots and save them to the database
         for (let i = 0; i < emptySlots.length; i++) {
             const { day, mealType } = emptySlots[i];
             const recipe = randomRecipes[i];
             await WeeklyPlanModel.saveMealPlanEntry(userId, day, mealType, recipe.id);
         }
 
-        // Fetch the updated plan to send back to the frontend
         const updatedPlan = await WeeklyPlanModel.getWeeklyPlan(userId);
         res.status(200).json({ message: 'Empty slots filled with random meals.', plan: updatedPlan });
 

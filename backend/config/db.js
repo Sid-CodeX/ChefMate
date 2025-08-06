@@ -1,4 +1,3 @@
-// config/db.js
 require("dotenv").config();
 const { Pool } = require("pg");
 
@@ -6,7 +5,7 @@ const { Pool } = require("pg");
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URI,
   ssl: {
-    rejectUnauthorized: false, // Accept Supabase SSL cert
+    rejectUnauthorized: false, 
   },
 });
 

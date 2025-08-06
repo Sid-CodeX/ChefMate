@@ -59,7 +59,7 @@ export const mealPlannerService = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({}), // Sending an empty body as the backend will fetch the plan
     });
 
     if (!response.ok) {
@@ -84,13 +84,14 @@ export const mealPlannerService = {
     recipeId: number,
     token: string
   ): Promise<SaveMealPlanResponse> {
-    const response = await fetch(`${API_BASE_URL}/planner/meal`, {
+    // Corrected URL to match the backend router
+    const response = await fetch(`${API_BASE_URL}/planner/weekly-plan/meal`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ dayOfWeek, mealSlot, recipeId }),
+      body: JSON.stringify({ day_of_week: dayOfWeek, meal_slot: mealSlot, recipe_id: recipeId }),
     });
 
     if (!response.ok) {
@@ -113,13 +114,14 @@ export const mealPlannerService = {
     mealSlot: string,
     token: string
   ): Promise<SaveMealPlanResponse> {
-    const response = await fetch(`${API_BASE_URL}/planner/meal`, {
+    // Corrected URL to match the backend router
+    const response = await fetch(`${API_BASE_URL}/planner/weekly-plan/meal`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ dayOfWeek, mealSlot }),
+      body: JSON.stringify({ day_of_week: dayOfWeek, meal_slot: mealSlot }),
     });
 
     if (!response.ok) {

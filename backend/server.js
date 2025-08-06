@@ -1,3 +1,6 @@
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first"); // Force IPv4 over IPv6
+
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -24,7 +27,7 @@ app.use(morgan("dev"));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min window
+  windowMs: 15 * 60 * 1000, // 15-minute window
   max: 100, // max requests per window
   message: "Too many requests from this IP, please try again later.",
 });

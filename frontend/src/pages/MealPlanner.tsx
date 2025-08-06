@@ -30,7 +30,7 @@ interface RecipeForSelection {
     id: number;
     name: string;
     prep_time: string;
-    // img_url removed as per request to not show images during selection
+    
 }
 
 const MealPlanner = () => {
@@ -47,6 +47,7 @@ const MealPlanner = () => {
     const [isGeneratingList, setIsGeneratingList] = useState(false);
     const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
     const [currentSlotForSelection, setCurrentSlotForSelection] = useState<{ day: string; mealType: string } | null>(null);
+    const [isRandomizing, setIsRandomizing] = useState(false); 
 
     const fetchWeeklyPlan = async () => {
         if (!user?.token) {
@@ -97,7 +98,7 @@ const MealPlanner = () => {
 
         const meals = Object.values(mealPlan)
             .flatMap(day => Object.values(day).filter(Boolean))
-            .map(meal => (meal as { name: string }).name); // Extract only the names
+            .map(meal => (meal as { name: string }).name); 
         
         if (meals.length === 0) {
             toast({ title: "No Meals Planned", description: "Please add recipes before generating a shopping list.", variant: "info" });
@@ -106,13 +107,32 @@ const MealPlanner = () => {
 
         setIsGeneratingList(true);
         try {
-            await mealPlannerService.generateShoppingList(user.token); // Pass the list of meal names
+            await mealPlannerService.generateShoppingList(user.token);
             toast({ title: "Success", description: "Shopping list generated.", variant: "success" });
             navigate('/shopping-list');
         } catch (error: any) {
             toast({ title: "Generation Failed", description: error.message || "Please try again later.", variant: "destructive" });
         } finally {
             setIsGeneratingList(false);
+        }
+    };
+
+    // Function to handle random meal generation
+    const handleRandomizeMeals = async () => {
+        if (!user?.token) {
+            toast({ title: "Login Required", description: "Please log in to randomize your meal plan.", variant: "destructive" });
+            return;
+        }
+        
+        setIsRandomizing(true);
+        try {
+            await mealPlannerService.randomizeMealPlan(user.token);
+            await fetchWeeklyPlan(); // Re-fetch the plan to get the updated randomized meals
+            toast({ title: "Success", description: "Empty slots filled with random meals.", variant: "success" });
+        } catch (error: any) {
+            toast({ title: "Randomization Failed", description: error.message || "Please try again later.", variant: "destructive" });
+        } finally {
+            setIsRandomizing(false);
         }
     };
 
@@ -135,7 +155,6 @@ const MealPlanner = () => {
 
         try {
             const response = await mealPlannerService.saveMealToPlan(day, mealType, recipeId, user.token);
-            // Re-fetch the plan to ensure state is synchronized with the backend
             await fetchWeeklyPlan();
             toast({ title: "Meal Added", description: `${name} added to ${day} ${mealType}.`, variant: "success" });
         } catch (error: any) {
@@ -155,7 +174,6 @@ const MealPlanner = () => {
         setIsLoadingPlan(true);
         try {
             await mealPlannerService.deleteMealFromPlan(day, mealType, user.token);
-            // Re-fetch the plan to ensure state is synchronized with the backend
             await fetchWeeklyPlan();
             toast({ title: "Meal Removed", description: `Removed from ${day} ${mealType}.`, variant: "success" });
         } catch (error: any) {
@@ -277,8 +295,14 @@ const MealPlanner = () => {
                         <Button variant="outline" className="p-6 h-auto flex-col space-y-2">
                             <span>Copy Last Week</span>
                         </Button>
-                        <Button variant="outline" className="p-6 h-auto flex-col space-y-2">
-                            <span>Random Meals</span>
+                        {/* Updated button for Random Meals */}
+                        <Button 
+                            variant="outline" 
+                            className="p-6 h-auto flex-col space-y-2"
+                            onClick={handleRandomizeMeals}
+                            disabled={isRandomizing || !user}
+                        >
+                            <span>{isRandomizing ? "Randomizing..." : "Random Meals"}</span>
                         </Button>
                     </div>
                 </CardContent>

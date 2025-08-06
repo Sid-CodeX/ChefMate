@@ -44,3 +44,22 @@ exports.filterRecipes = async ({ diet, course, region }) => {
   const result = await pool.query(query, values);
   return result.rows;
 };
+
+// Fetch random recipes for meal planning
+exports.getRandomRecipes = async (count) => {
+    try {
+        const result = await pool.query(
+            `
+            SELECT id, name, prep_time, cook_time
+            FROM recipes
+            ORDER BY RANDOM()
+            LIMIT $1;
+            `,
+            [count]
+        );
+        return result.rows;
+    } catch (error) {
+        console.error('[DB] Failed to fetch random recipes:', error);
+        throw error;
+    }
+};

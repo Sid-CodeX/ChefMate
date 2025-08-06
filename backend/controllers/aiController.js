@@ -1,16 +1,7 @@
-// External dependencies
 const axios = require('axios');
-const ChatModel = require('../models/chatModel');
 const ShoppingListModel = require('../models/shoppingListModel');
-
-// Environment variable: Hugging Face Space base URL
 const HF_SPACE_BASE_URL = process.env.HF_SPACE_BASE_URL;
 
-/**
- * Maps customization options to AI-friendly instructions.
- * @param {string} optionParam - Customization option.
- * @returns {string} Instruction string for the AI.
- */
 const mapCustomizationOptionToInstruction = (optionParam) => {
   switch (optionParam) {
     case 'vegan':
@@ -31,10 +22,6 @@ const mapCustomizationOptionToInstruction = (optionParam) => {
   }
 };
 
-/**
- * POST /customize-recipe
- * Sends recipe and instruction to Hugging Face and returns the customized result.
- */
 exports.customizeRecipe = async (req, res) => {
   const { originalRecipe, customizationOption } = req.body;
 
@@ -82,22 +69,22 @@ exports.customizeRecipe = async (req, res) => {
 
 /**
  * POST /chat
- * Handles a user message, sends it to Hugging Face, saves to DB, and returns the response.
+ * Handles a single user message and gets a response from the AI.
  */
 exports.handleChat = async (req, res) => {
-  const { message, history } = req.body;
+  const { message } = req.body;
   const userId = req.user.id;
 
   if (!userId) return res.status(401).json({ error: 'Authentication required.' });
   if (!message) return res.status(400).json({ error: 'Message is required.' });
 
   try {
-    await ChatModel.saveChatMessage(userId, message, 'user');
-
     const chatEndpointUrl = `${HF_SPACE_BASE_URL}/chat/`;
+    
+    // We send only the single message, not the history, to the AI service.
     const hfResponse = await axios.post(
       chatEndpointUrl,
-      { history, message },
+      { message },
       {
         headers: { 'Content-Type': 'application/json' },
         timeout: 90000,
@@ -110,12 +97,11 @@ exports.handleChat = async (req, res) => {
       return res.status(500).json({ error: 'AI service returned an invalid or empty response.' });
     }
 
-    await ChatModel.saveChatMessage(userId, assistantReply, 'assistant');
-    const updatedHistory = await ChatModel.getChatHistory(userId);
-
-    res.status(200).json({ reply: assistantReply, history: updatedHistory });
+    // Since we are not storing history, we just return the reply.
+    res.status(200).json({ reply: assistantReply });
 
   } catch (error) {
+    console.error("Error in handleChat:", error);
     if (error.response) {
       return res.status(error.response.status).json({
         error: error.response.data.detail || `AI service error: ${error.response.status}`,
@@ -129,25 +115,6 @@ exports.handleChat = async (req, res) => {
   }
 };
 
-/**
- * GET /chat-history
- * Retrieves the authenticated user's chat history.
- */
-exports.getChatHistory = async (req, res) => {
-  const userId = req.user.id;
-
-  try {
-    const history = await ChatModel.getChatHistory(userId);
-    res.status(200).json({ history });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load chat history.', details: error.message });
-  }
-};
-
-/**
- * POST /generate-shopping-list
- * Generates a shopping list based on dish names via AI and saves it.
- */
 exports.generateShoppingList = async (req, res) => {
   const { dishNames } = req.body;
   const userId = req.user.id;
@@ -192,10 +159,6 @@ exports.generateShoppingList = async (req, res) => {
   }
 };
 
-/**
- * GET /shopping-list
- * Retrieves the latest shopping list generated for the authenticated user.
- */
 exports.getShoppingList = async (req, res) => {
   const userId = req.user.id;
 

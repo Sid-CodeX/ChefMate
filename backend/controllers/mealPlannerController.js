@@ -1,5 +1,6 @@
 const WeeklyPlanModel = require('../models/weeklyPlanModel');
 const ShoppingListModel = require('../models/shoppingListModel');
+const RecipeModel = require('../models/recipeModel'); 
 const axios = require('axios');
 const HF_SPACE_BASE_URL = process.env.HF_SPACE_BASE_URL;
 
@@ -9,7 +10,7 @@ const HF_SPACE_BASE_URL = process.env.HF_SPACE_BASE_URL;
  * @access Protected
  */
 exports.getWeeklyPlan = async (req, res) => {
-    const userId = req.user.id; 
+    const userId = req.user.id;
 
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required.' });
@@ -30,7 +31,7 @@ exports.getWeeklyPlan = async (req, res) => {
  * @access Protected
  */
 exports.generateShoppingListFromPlan = async (req, res) => {
-    const userId = req.user.id; // From auth middleware
+    const userId = req.user.id;
 
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required.' });
@@ -42,7 +43,6 @@ exports.generateShoppingListFromPlan = async (req, res) => {
             return res.status(400).json({ message: 'No meals planned to generate a list from.' });
         }
 
-        // Extract unique dish names from the plan
         const dishNames = Array.from(new Set(plan.map(item => item.recipe_name))).filter(Boolean);
         
         if (dishNames.length === 0) {
@@ -51,7 +51,6 @@ exports.generateShoppingListFromPlan = async (req, res) => {
 
         console.log(`[AI Shopping - Planner] Generating list for user ${userId} with dishes:`, dishNames);
 
-        // Call Hugging Face Space for shopping list generation
         const shoppingEndpointUrl = `${HF_SPACE_BASE_URL}/shopping/`;
         const payload = {
             dishes: dishNames,
@@ -61,7 +60,7 @@ exports.generateShoppingListFromPlan = async (req, res) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            timeout: 120000, 
+            timeout: 120000,
         });
 
         const generatedList = hfResponse.data.shopping_list;
@@ -71,7 +70,6 @@ exports.generateShoppingListFromPlan = async (req, res) => {
             return res.status(500).json({ error: 'AI service returned an invalid or empty shopping list.' });
         }
 
-        // Save the generated list to the database
         const savedList = await ShoppingListModel.saveShoppingList(userId, generatedList);
         console.log(`[AI Shopping - Planner] Shopping list saved to DB with ID: ${savedList.id}`);
 
@@ -104,11 +102,11 @@ exports.generateShoppingListFromPlan = async (req, res) => {
 exports.saveMealToPlan = async (req, res) => {
     const userId = req.user.id;
     const { day_of_week, meal_slot, recipe_id } = req.body;
-  
+ 
     if (!day_of_week || !meal_slot || !recipe_id) {
         return res.status(400).json({ error: 'Day, meal slot, and recipe ID are required.' });
     }
-  
+ 
     try {
         const result = await WeeklyPlanModel.saveMealPlanEntry(userId, day_of_week, meal_slot, recipe_id);
         const plan = await WeeklyPlanModel.getWeeklyPlan(userId);
@@ -137,5 +135,63 @@ exports.deleteMealFromPlan = async (req, res) => {
         res.status(200).json({ message: 'Meal plan entry deleted.', plan });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete meal plan entry.', details: error.message });
+    }
+};
+
+/**
+ * Fills empty meal plan slots with random recipes for the logged-in user.
+ * @route POST /api/planner/random-meals
+ * @access Protected
+ */
+exports.randomizeMealPlan = async (req, res) => {
+    const userId = req.user.id;
+
+    if (!userId) {
+        return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    try {
+        // Retrieve the current meal plan to identify empty slots
+        const currentPlan = await WeeklyPlanModel.getWeeklyPlan(userId);
+        const plannedSlots = new Set(currentPlan.map(meal => `${meal.day_of_week}-${meal.meal_slot}`));
+
+        const emptySlots = [];
+        const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        const mealTypes = ["breakfast", "lunch", "dinner"];
+
+        // Determine which slots are currently empty
+        weekDays.forEach(day => {
+            mealTypes.forEach(mealType => {
+                if (!plannedSlots.has(`${day}-${mealType}`)) {
+                    emptySlots.push({ day, mealType });
+                }
+            });
+        });
+
+        if (emptySlots.length === 0) {
+            return res.status(200).json({ message: 'All meal slots are already filled.', plan: currentPlan });
+        }
+
+        // Fetch random recipes from the database to fill the empty slots
+        const randomRecipes = await RecipeModel.getRandomRecipes(emptySlots.length);
+
+        if (randomRecipes.length < emptySlots.length) {
+            return res.status(500).json({ error: 'Not enough recipes in the database to fill all slots.' });
+        }
+
+        // Assign random recipes to the empty slots and save them to the database
+        for (let i = 0; i < emptySlots.length; i++) {
+            const { day, mealType } = emptySlots[i];
+            const recipe = randomRecipes[i];
+            await WeeklyPlanModel.saveMealPlanEntry(userId, day, mealType, recipe.id);
+        }
+
+        // Fetch the updated plan to send back to the frontend
+        const updatedPlan = await WeeklyPlanModel.getWeeklyPlan(userId);
+        res.status(200).json({ message: 'Empty slots filled with random meals.', plan: updatedPlan });
+
+    } catch (error) {
+        console.error("[MealPlanner] Error randomizing meal plan:", error.message);
+        res.status(500).json({ error: 'Failed to randomize meal plan.', details: error.message });
     }
 };

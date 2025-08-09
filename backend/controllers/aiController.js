@@ -23,6 +23,15 @@ const mapCustomizationOptionToInstruction = (optionParam) => {
     }
 };
 
+// Made caching resilient to Redis failures
+const safeSetCache = async (key, value, expireTime) => {
+    try {
+        await redisClient.set(key, value, 'EX', expireTime);
+    } catch (err) {
+        console.error('Failed to set cache for key:', key, err);
+    }
+};
+
 exports.customizeRecipe = async (req, res) => {
     const { originalRecipe, customizationOption } = req.body;
     const cacheKey = `custom_recipe:${customizationOption}:${originalRecipe}`;
@@ -58,7 +67,7 @@ exports.customizeRecipe = async (req, res) => {
                 .join('\n');
             const responseData = { customizedRecipe: formattedRecipe };
 
-            await redisClient.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+            await safeSetCache(cacheKey, JSON.stringify(responseData), 3600);
             return res.status(200).json(responseData);
         }
 
@@ -111,7 +120,7 @@ exports.handleChat = async (req, res) => {
         }
 
         const responseData = { reply: assistantReply };
-        await redisClient.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+        await safeSetCache(cacheKey, JSON.stringify(responseData), 3600);
         res.status(200).json(responseData);
 
     } catch (error) {
@@ -132,16 +141,20 @@ exports.handleChat = async (req, res) => {
 exports.generateShoppingList = async (req, res) => {
     const { dishNames } = req.body;
     const userId = req.user.id;
-    
-    // Key for the specific list (e.g., used to cache specific combinations of dishes)
-    const specificCacheKey = `shopping_list:${userId}:${JSON.stringify(dishNames.sort())}`;
-    
-    // Key for the user's latest list (used by getShoppingList)
-    const latestListCacheKey = `latest_shopping_list:${userId}`;
 
     if (!userId) return res.status(401).json({ error: 'Authentication required.' });
     if (!Array.isArray(dishNames) || dishNames.length === 0) {
         return res.status(400).json({ error: 'Please provide an array of dish names.' });
+    }
+    // Sort dish names to ensure consistent cache keys 
+    const specificCacheKey = `shopping_list:${userId}:${JSON.stringify(dishNames.sort())}`;
+    const latestListCacheKey = `latest_shopping_list:${userId}`;
+
+    // Check if the specific list is already in the cache
+    const cachedResult = await redisClient.get(specificCacheKey);
+    if (cachedResult) {
+        console.log('Serving shopping list from Redis cache.');
+        return res.status(200).json(JSON.parse(cachedResult));
     }
 
     const shoppingEndpointUrl = `${HF_SPACE_BASE_URL}/shopping/`;
@@ -171,16 +184,15 @@ exports.generateShoppingList = async (req, res) => {
         const responseData = { shoppingList: generatedList, savedListId: savedList.id };
 
         // Cache the specific list for future identical requests
-        await redisClient.set(specificCacheKey, JSON.stringify(responseData), 'EX', 3600);
+        await safeSetCache(specificCacheKey, JSON.stringify(responseData), 3600);
         
-        // Update the 'latest list' cache key for immediate retrieval
-        await redisClient.set(
+        // Also update the 'latest list' cache key for immediate retrieval
+        await safeSetCache(
             latestListCacheKey,
             JSON.stringify({ 
                 shoppingList: savedList.items,
                 generatedAt: savedList.generated_at.toISOString() 
             }),
-            'EX',
             3600
         );
 
@@ -202,9 +214,8 @@ exports.generateShoppingList = async (req, res) => {
 
 exports.getShoppingList = async (req, res) => {
     const userId = req.user.id;
-    const cacheKey = `latest_shopping_list:${userId}`; // Use a unique key for the latest list
+    const cacheKey = `latest_shopping_list:${userId}`; 
 
-    // Check if the latest list is in the cache
     const cachedResult = await redisClient.get(cacheKey);
     if (cachedResult) {
         console.log('Serving latest shopping list from Redis cache.');
@@ -226,8 +237,7 @@ exports.getShoppingList = async (req, res) => {
             generatedAt: latestList.generated_at,
         };
         
-        // Cache the response from the database for 1 hour
-        await redisClient.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+        await safeSetCache(cacheKey, JSON.stringify(responseData), 3600);
 
         res.status(200).json(responseData);
 

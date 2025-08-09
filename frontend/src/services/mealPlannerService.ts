@@ -14,17 +14,13 @@ interface MealPlanApiResponse {
     plan: WeeklyPlanEntry[];
 }
 
-interface GenerateShoppingListResponse {
-    shoppingList: string;
-    savedListId: number;
-}
-
 interface SaveMealPlanResponse {
     message: string;
     plan: WeeklyPlanEntry[];
 }
 
 export const mealPlannerService = {
+    // Fetch the entire weekly meal plan
     async getWeeklyPlan(token: string): Promise<WeeklyPlanEntry[]> {
         const response = await fetch(`${API_BASE_URL}/planner/weekly-plan`, {
             method: 'GET',
@@ -42,24 +38,7 @@ export const mealPlannerService = {
         return data.plan;
     },
 
-    async generateShoppingList(token: string): Promise<GenerateShoppingListResponse> {
-        const response = await fetch(`${API_BASE_URL}/planner/generate-shopping-list`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred.' }));
-            throw new Error(errorData.error || errorData.message || `Failed to generate shopping list: ${response.statusText}`);
-        }
-
-        return response.json();
-    },
-
+    // Save a meal to the weekly plan
     async saveMealToPlan(
         dayOfWeek: string,
         mealSlot: string,
@@ -83,6 +62,7 @@ export const mealPlannerService = {
         return response.json();
     },
 
+    // Delete a meal from the weekly plan
     async deleteMealFromPlan(
         dayOfWeek: string,
         mealSlot: string,
@@ -105,7 +85,7 @@ export const mealPlannerService = {
         return response.json();
     },
 
-    // Service function for randomizing meals
+    // Generate a randomized weekly meal plan
     async randomizeMealPlan(token: string): Promise<SaveMealPlanResponse> {
         const response = await fetch(`${API_BASE_URL}/planner/random-meals`, {
             method: 'POST',

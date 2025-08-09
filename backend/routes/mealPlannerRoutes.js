@@ -31,12 +31,4 @@ router.delete('/weekly-plan/meal', authMiddleware, mealPlannerController.deleteM
  */
 router.post('/random-meals', authMiddleware, mealPlannerController.randomizeMealPlan); // New route
 
-
-/**
- * @route POST /api/planner/generate-shopping-list
- * @desc Generate a shopping list based on the current weekly plan
- * @access Protected
- */
-router.post('/generate-shopping-list', authMiddleware, mealPlannerController.generateShoppingListFromPlan);
-
 module.exports = router;

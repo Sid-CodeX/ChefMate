@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const aiController = require('../controllers/aiController');
-const { authMiddleware } = require('../middlewares/authMiddleware'); // Make sure this path is correct
+const { authMiddleware } = require('../middlewares/authMiddleware');
 
 /**
  * @route   POST /api/ai/customize-recipe
@@ -10,7 +10,6 @@ const { authMiddleware } = require('../middlewares/authMiddleware'); // Make sur
  */
 router.post('/customize-recipe', authMiddleware, aiController.customizeRecipe);
 
-// New AI Chat Routes
 /**
  * @route   POST /api/ai/chat
  * @desc    Send a message to the AI chatbot and get a response
@@ -23,7 +22,7 @@ router.post('/chat', authMiddleware, aiController.handleChat);
  * @desc    Generate a shopping list from a list of dish names using AI
  * @access  Protected (requires authentication)
  */
-router.post('/generate-shopping-list', authMiddleware, aiController.generateShoppingList);
+router.post('/generate-shopping-list', authMiddleware, aiController.generateShoppingList); // This route is now active here
 
 /**
  * @route   GET /api/ai/shopping-list

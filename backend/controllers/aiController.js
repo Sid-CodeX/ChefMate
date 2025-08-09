@@ -1,5 +1,6 @@
 const axios = require('axios');
 const ShoppingListModel = require('../models/shoppingListModel');
+const redisClient = require('../utils/redisClient'); 
 const HF_SPACE_BASE_URL = process.env.HF_SPACE_BASE_URL;
 
 const mapCustomizationOptionToInstruction = (optionParam) => {
@@ -24,6 +25,13 @@ const mapCustomizationOptionToInstruction = (optionParam) => {
 
 exports.customizeRecipe = async (req, res) => {
     const { originalRecipe, customizationOption } = req.body;
+    const cacheKey = `custom_recipe:${customizationOption}:${originalRecipe}`;
+
+    const cachedResult = await redisClient.get(cacheKey);
+    if (cachedResult) {
+        console.log('Serving customized recipe from Redis cache.');
+        return res.status(200).json(JSON.parse(cachedResult));
+    }
 
     if (!originalRecipe || !customizationOption) {
         return res.status(400).json({ message: "Original recipe and customization option are required." });
@@ -48,8 +56,10 @@ exports.customizeRecipe = async (req, res) => {
             const formattedRecipe = hfData.rewritten_recipe
                 .map((step, idx) => `${idx + 1}. ${step.trim()}`)
                 .join('\n');
+            const responseData = { customizedRecipe: formattedRecipe };
 
-            return res.status(200).json({ customizedRecipe: formattedRecipe });
+            await redisClient.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+            return res.status(200).json(responseData);
         }
 
         return res.status(500).json({ message: "Unexpected response from AI service. Please check Hugging Face logs." });
@@ -67,10 +77,6 @@ exports.customizeRecipe = async (req, res) => {
     }
 };
 
-/**
- * POST /chat
- * Handles a single user message and gets a response from the AI.
- */
 exports.handleChat = async (req, res) => {
     const { message } = req.body;
     const userId = req.user.id;
@@ -78,10 +84,17 @@ exports.handleChat = async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Authentication required.' });
     if (!message) return res.status(400).json({ error: 'Message is required.' });
 
+    const cacheKey = `chat:${userId}:${message}`;
+    const cachedResult = await redisClient.get(cacheKey);
+
+    if (cachedResult) {
+        console.log('Serving chat response from Redis cache.');
+        return res.status(200).json(JSON.parse(cachedResult));
+    }
+
     try {
         const chatEndpointUrl = `${HF_SPACE_BASE_URL}/chat/`;
-        
-        // We send only the single message, not the history, to the AI service.
+
         const hfResponse = await axios.post(
             chatEndpointUrl,
             { message },
@@ -97,8 +110,9 @@ exports.handleChat = async (req, res) => {
             return res.status(500).json({ error: 'AI service returned an invalid or empty response.' });
         }
 
-        // Since we are not storing history, we just return the reply.
-        res.status(200).json({ reply: assistantReply });
+        const responseData = { reply: assistantReply };
+        await redisClient.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+        res.status(200).json(responseData);
 
     } catch (error) {
         console.error("Error in handleChat:", error);
@@ -118,6 +132,12 @@ exports.handleChat = async (req, res) => {
 exports.generateShoppingList = async (req, res) => {
     const { dishNames } = req.body;
     const userId = req.user.id;
+    
+    // Key for the specific list (e.g., used to cache specific combinations of dishes)
+    const specificCacheKey = `shopping_list:${userId}:${JSON.stringify(dishNames.sort())}`;
+    
+    // Key for the user's latest list (used by getShoppingList)
+    const latestListCacheKey = `latest_shopping_list:${userId}`;
 
     if (!userId) return res.status(401).json({ error: 'Authentication required.' });
     if (!Array.isArray(dishNames) || dishNames.length === 0) {
@@ -137,19 +157,34 @@ exports.generateShoppingList = async (req, res) => {
         );
 
         const generatedList = hfResponse.data.shopping_list;
-
+        
         if (!generatedList || typeof generatedList !== 'string') {
-            return res.status(500).json({ error: 'AI service returned an invalid or empty shopping list.' });
+            return res.status(500).json({ error: 'AI service returned an invalid or empty response.' });
         }
         
-        // ✨ UPDATED: Wrap the generated list string inside a JSON object
         const listToSave = {
             content: generatedList,
             dishes: dishNames,
         };
 
         const savedList = await ShoppingListModel.saveShoppingList(userId, listToSave);
-        res.status(200).json({ shoppingList: generatedList, savedListId: savedList.id });
+        const responseData = { shoppingList: generatedList, savedListId: savedList.id };
+
+        // Cache the specific list for future identical requests
+        await redisClient.set(specificCacheKey, JSON.stringify(responseData), 'EX', 3600);
+        
+        // Update the 'latest list' cache key for immediate retrieval
+        await redisClient.set(
+            latestListCacheKey,
+            JSON.stringify({ 
+                shoppingList: savedList.items,
+                generatedAt: savedList.generated_at.toISOString() 
+            }),
+            'EX',
+            3600
+        );
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         if (error.response) {
@@ -167,6 +202,14 @@ exports.generateShoppingList = async (req, res) => {
 
 exports.getShoppingList = async (req, res) => {
     const userId = req.user.id;
+    const cacheKey = `latest_shopping_list:${userId}`; // Use a unique key for the latest list
+
+    // Check if the latest list is in the cache
+    const cachedResult = await redisClient.get(cacheKey);
+    if (cachedResult) {
+        console.log('Serving latest shopping list from Redis cache.');
+        return res.status(200).json(JSON.parse(cachedResult));
+    }
 
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required.' });
@@ -178,10 +221,15 @@ exports.getShoppingList = async (req, res) => {
             return res.status(404).json({ message: 'No shopping list found for this user.' });
         }
 
-        res.status(200).json({
+        const responseData = {
             shoppingList: latestList.items,
             generatedAt: latestList.generated_at,
-        });
+        };
+        
+        // Cache the response from the database for 1 hour
+        await redisClient.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         res.status(500).json({ error: 'Failed to load shopping list.', details: error.message });

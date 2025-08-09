@@ -8,6 +8,7 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const pool = require("./config/db");
+const redisClient = require("./utils/redisClient");
 
 const authRoutes = require("./routes/authRoutes");
 const favoritesRoutes = require("./routes/favoritesRoutes");
@@ -27,9 +28,9 @@ app.use(morgan("dev"));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15-minute window
-  max: 100, // max requests per window
-  message: "Too many requests from this IP, please try again later.",
+    windowMs: 15 * 60 * 1000, // 15-minute window
+    max: 100, // max requests per window
+    message: "Too many requests from this IP, please try again later.",
 });
 app.use(limiter);
 
@@ -42,22 +43,28 @@ app.use('/api/planner', mealPlannerRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
-  res.send("Welcome to ChefMate API!");
+    res.send("Welcome to ChefMate API!");
 });
 
 // Server start
 const PORT = process.env.PORT || 5000;
 
 (async () => {
-  try {
-    await pool.connect(); // Supabase PostgreSQL connection
-    console.log("Connected to Supabase PostgreSQL");
+    try {
+        // Supabase PostgreSQL connection
+        await pool.connect();
+        await pool.connect();
+        console.log("Connected to Supabase PostgreSQL");
 
-    app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error("Startup failed:", err);
-    process.exit(1);
-  }
+        // Connect to Redis
+        await redisClient.connect();
+        console.log("Connected to Redis");
+
+        app.listen(PORT, () => {
+            console.log(`Server running at http://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.error("Startup failed:", err);
+        process.exit(1);
+    }
 })();

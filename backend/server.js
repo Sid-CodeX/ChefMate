@@ -15,6 +15,7 @@ const favoritesRoutes = require("./routes/favoritesRoutes");
 const recipesRoutes = require("./routes/recipesRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const mealPlannerRoutes = require('./routes/mealPlannerRoutes'); 
+const gamificationRoutes = require('./routes/gamificationRoutes');
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use("/api/favorites", favoritesRoutes);
 app.use("/api/recipes", recipesRoutes);
 app.use("/api/ai", aiRoutes);
 app.use('/api/planner', mealPlannerRoutes);
+app.use("/api/gamification", gamificationRoutes);
 
 // Health check route
 app.get("/", (req, res) => {

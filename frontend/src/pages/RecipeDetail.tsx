@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, ChefHat, MapPin, Utensils, Share2, Sparkles } from "l
 import CookingBox from "@/components/CookingBox";
 import { useToast } from "@/hooks/use-toast";
 import { Recipe } from '@/types/recipe';
+import { useAuth } from '@/contexts/AuthContext'; 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const FALLBACK_IMAGE_URL = '/placeholder.svg';
@@ -19,6 +20,7 @@ const RecipeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth(); 
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,12 +35,28 @@ const RecipeDetail = () => {
         setIsLoading(false);
         return;
       }
+      
+      // Check for token before making the call
+      if (!user?.token) {
+        setError("Token missing");
+        setIsLoading(false);
+        toast({
+          title: "Recipe Load Failed",
+          description: "Token missing",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/recipes/${id}`);
+        const response = await fetch(`${API_BASE_URL}/recipes/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${user.token}`,
+            },
+        });
         const data = await response.json();
 
         if (response.ok) {
@@ -65,11 +83,9 @@ const RecipeDetail = () => {
     };
 
     fetchRecipe();
-  }, [id, toast]);
+  }, [id, toast, user]); 
 
-  /**
-   * Copies formatted recipe details to clipboard.
-   */
+  // Copies formatted recipe details to clipboard.
   const handleShareRecipe = async () => {
     if (!recipe) {
       toast({
@@ -117,9 +133,7 @@ ${stepsArray.map((step, i) => `${i + 1}. ${step}`).join('\n')}
     }
   };
 
-  /**
-   * Navigates to AI-based recipe customizer with pre-filled content.
-   */
+  // Navigates to AI-based recipe customizer with pre-filled content.
   const handleRewriteRecipe = () => {
     if (!recipe) {
       toast({
@@ -278,7 +292,7 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
 
           <Button
             onClick={() => setShowCookingMode(!showCookingMode)}
-            disabled={!recipe} // FIX: Disable button if recipe data is not loaded
+            disabled={!recipe} 
             className="w-full bg-orange-500 hover:bg-orange-600 text-lg py-3"
           >
             {showCookingMode ? "Hide Cooking Mode" : "🍳 Start Cooking"}

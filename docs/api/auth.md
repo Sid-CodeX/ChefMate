@@ -1,230 +1,102 @@
-# Authentication API Documentation
+## Auth API Documentation 
 
-This module handles all user-related authentication and profile management functionalities in the system. It uses **JWT** for session handling and protects sensitive routes with a middleware-based approach. Passwords are securely hashed using **bcrypt**.
+This module handles all user-related functionality, including registration, authentication, profile management, and password changes. It uses a **JWT (JSON Web Token)**-based approach for session management and a middleware-based authentication system.
 
------
+The base path for all authentication endpoints is `/api/auth`.
 
-## Base Path
-
-All endpoints listed below are prefixed with `/api/auth`.
+\<br\>
 
 -----
 
-## Endpoints
+### Endpoints
 
-### 1\. `POST /register`
+All endpoints marked with **(🔒 Requires Auth)** are protected by the `authMiddleware` and require a valid JWT passed in the `Authorization` header as `Bearer <token>`.
+
+#### 1\. `POST /api/auth/register`
 
 Registers a new user in the system.
 
-**Request Body:**
+  * **Description:** Creates a new user account with a name, email, and password. The password is automatically hashed before being stored. A JWT is returned upon successful registration.
+  * **Request Body:**
+    ```json
+    {
+      "name": "string",
+      "email": "string",
+      "password": "string"
+    }
+    ```
+  * **Responses:**
+      * **`201 Created`**: User successfully registered.
+      * **`409 Conflict`**: User with the provided email already exists.
+      * **`500 Internal Server Error`**: Registration failed due to a server error.
 
-```json
-{
-  "name": "Sidharth",
-  "email": "sidharth@example.com",
-  "password": "securePassword"
-}
-```
+#### 2\. `POST /api/auth/login`
 
-**Success Response (201):**
+Logs in an existing user and returns a JWT.
 
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Sidharth",
-    "email": "sidharth@example.com",
-    "level": 1,
-    "xp": 0
-  },
-  "token": "JWT_TOKEN"
-}
-```
+  * **Description:** Authenticates a user with their email and password. Upon success, it updates the user's login metadata (like streak count) and returns the user object and a new JWT.
+  * **Request Body:**
+    ```json
+    {
+      "email": "string",
+      "password": "string"
+    }
+    ```
+  * **Responses:**
+      * **`200 OK`**: User successfully logged in.
+      * **`401 Unauthorized`**: Invalid credentials.
+      * **`404 Not Found`**: User not found.
+      * **`500 Internal Server Error`**: Login failed due to a server error.
 
-**Failure Cases:**
+#### 3\. `GET /api/auth/me` (🔒 Requires Auth)
 
-  * **409 Conflict:** User already exists
-  * **500 Internal Server Error**
+Fetches the profile of the currently logged-in user.
 
-### 2\. `POST /login`
+  * **Description:** Retrieves the complete user object, including all profile and badge-related information.
+  * **Responses:**
+      * **`200 OK`**: User information retrieved successfully.
+      * **`401 Unauthorized`**: Token missing.
+      * **`403 Forbidden`**: Invalid or expired token.
+      * **`404 Not Found`**: User not found.
 
-Logs an existing user in. Also updates login metadata (streak and last login time).
+#### 4\. `PUT /api/auth/update` (🔒 Requires Auth)
 
-**Request Body:**
+Updates the name of the logged-in user.
 
-```json
-{
-  "email": "sidharth@gmail.com",
-  "password": "password"
-}
-```
+  * **Description:** Allows the authenticated user to change their name.
+  * **Request Body:**
+    ```json
+    {
+      "name": "string"
+    }
+    ```
+  * **Responses:**
+      * **`200 OK`**: Profile successfully updated.
+      * **`401 Unauthorized`**: Token missing.
+      * **`403 Forbidden`**: Invalid or expired token.
 
-**Success Response (200):**
+#### 5\. `PUT /api/auth/change-password` (🔒 Requires Auth)
 
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Sidharth",
-    "email": "sidharth@gmail.com",
-    "level": 1,
-    "xp": 0,
-    "streak": 4,
-    "last_login": "2025-07-10T06:00:00.000Z"
-  },
-  "token": "JWT_TOKEN"
-}
-```
+Changes the password of the logged-in user.
 
-**Failure Cases:**
+  * **Description:** Allows an authenticated user to change their password.
+  * **Request Body:**
+    ```json
+    {
+      "newPassword": "string"
+    }
+    ```
+  * **Responses:**
+      * **`200 OK`**: Password successfully changed.
+      * **`401 Unauthorized`**: Token missing.
+      * **`403 Forbidden`**: Invalid or expired token.
 
-  * **404 Not Found:** User not found
-  * **401 Unauthorized:** Invalid credentials
-  * **500 Internal Server Error**
+#### 6\. `POST /api/auth/logout` (🔒 Requires Auth)
 
-### 3\. `POST /logout`
+Logs out the user.
 
-**Protected Route**
-
-Logs the user out (handled on frontend by deleting token). No session persistence is maintained on the server.
-
-**Headers:**
-
-```makefile
-Authorization: Bearer <JWT_TOKEN>
-```
-
-**Response (200):**
-
-```json
-{
-  "message": "Logged out"
-}
-```
-
-### 4\. `GET /me`
-
-**Protected Route**
-
-Fetches the currently logged-in user's profile data.
-
-**Headers:**
-
-```makefile
-Authorization: Bearer <JWT_TOKEN>
-```
-
-**Response (200):**
-
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Sidharth",
-    "email": "sidharth@gmail.com",
-    "level": 1,
-    "xp": 0,
-    "streak": 4,
-    "last_login": "2025-07-10T06:00:00.000Z"
-  }
-}
-```
-
-### 5\. `PUT /update`
-
-**Protected Route**
-
-Updates the user's name.
-
-**Request Body:**
-
-```json
-{
-  "name": "Sidharth P"
-}
-```
-
-**Response (200):**
-
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Sidharth P",
-    "email": "sidharth@gmail.com",
-    "level": 1,
-    "xp": 0,
-    "streak": 4,
-    "last_login": "2025-07-10T06:00:00.000Z"
-  }
-}
-```
-
-### 6\. `PUT /change-password`
-
-**Protected Route**
-
-Changes the current user's password.
-
-**Request Body:**
-
-```json
-{
-  "newPassword": "newpassword"
-}
-```
-
-**Response (200):**
-
-```json
-{
-  "message": "Password changed"
-}
-```
-
------
-
-## Core Concepts
-
-### Password Security
-
-Passwords are hashed with **bcrypt** (salt rounds = 10) before storing and are never exposed in responses.
-
-### Token Handling
-
-**JWTs** are generated at login and registration. They are used in `Authorization` headers for protected routes.
-
-### Login Metadata
-
-Each login updates:
-
-  * `last_login` timestamp
-  * Daily login `streak` (auto-incremented if last login was yesterday)
-
------
-
-## Utility Functions Used
-
-| Function                       | Purpose                            |
-| :----------------------------- | :--------------------------------- |
-| `findUserByEmail(email)`       | Find user record by email          |
-| `createUser({ name, email, password })` | Insert new user into database      |
-| `findUserById(id)`             | Get user profile by ID             |
-| `updateUserName(id, name)`     | Update the user’s display name     |
-| `updateUserPassword(id, password)` | Securely store new password        |
-| `updateLoginMeta(userId)`      | Handle streak and login timestamp logic |
-
------
-
-## Middleware
-
-All protected routes use `authMiddleware`. This middleware:
-
-  * Validates the **JWT** token
-  * Extracts `user.id` and adds it to `req.user`
-
------
-
-## Status
-
-Fully implemented, tested, and integrated with frontend. 
+  * **Description:** This endpoint doesn't invalidate the token on the server side (since JWTs are stateless), but it provides a clear client-side action for logging out.
+  * **Responses:**
+      * **`200 OK`**: User successfully logged out.
+      * **`401 Unauthorized`**: Token missing.
+      * **`403 Forbidden`**: Invalid or expired token.

@@ -1,150 +1,46 @@
-# Favorites API Documentation
+### Favorites API Documentation 
 
-This module handles adding, retrieving, and removing favorite recipes for authenticated users. Each user can mark multiple recipes as favorites and retrieve them later.
-
------
+This module allows authenticated users to manage their favorite recipes. A user can add a recipe to their favorites, remove one, or retrieve their entire list of favorited recipes.
 
 ## Base Path
+The base path for all favorites endpoints is `/api/favorites`.
 
-All endpoints are protected and require a valid JWT token in the `Authorization` header.
-
------
+---
 
 ## Endpoints
 
-### 1\. `GET /`
+All endpoints are protected by the `authMiddleware` and require a valid JWT passed in the `Authorization` header as `Bearer <token>`.
 
-Get all favorite recipes of the logged-in user.
+### 1. `GET /api/favorites`
+Retrieves all recipes that the authenticated user has marked as a favorite.
 
-**Headers:**
+* **Description:** Fetches a list of all recipe IDs and associated details that the current user has favorited.
+* **Responses:**
+    * `200 OK`: Successfully retrieved the list of favorite recipes.
+    * `401 Unauthorized`: Token missing.
+    * `403 Forbidden`: Invalid or expired token.
+    * `500 Internal Server Error`: Failed to retrieve favorite recipes.
 
-```
-Authorization: Bearer <JWT_TOKEN>
-```
+### 2. `POST /api/favorites/:recipeId`
+Adds a recipe to the authenticated user's favorites.
 
-**Success Response (200):**
+* **Description:** Adds a specific recipe to the user's favorites list. If the recipe is already a favorite, the request will return a `201` status, as the operation is **idempotent**.
+* **Path Parameters:**
+    * `recipeId`: `string` (UUID) - The unique identifier of the recipe to add.
+* **Responses:**
+    * `201 Created`: Recipe successfully added to favorites.
+    * `401 Unauthorized`: Token missing.
+    * `403 Forbidden`: Invalid or expired token.
+    * `500 Internal Server Error`: Failed to add the recipe to favorites.
 
-```json
-{
-  "favorites": [
-    {
-      "id": 2,
-      "name": "Palak Paneer",
-      "ingredients": "palak, paneer, spices...",
-      "instructions": "...",
-      "diet": "Vegetarian",
-      "region": "North India",
-      "image_url": "https://example.com/palak-paneer.jpg"
-    },
-    {
-      "id": 5,
-      "name": "Masala Dosa",
-      "ingredients": "rice, lentils, potato...",
-      "instructions": "...",
-      "diet": "Vegetarian",
-      "region": "South India",
-      "image_url": "https://example.com/masala-dosa.jpg"
-    }
-  ]
-}
-```
+### 3. `DELETE /api/favorites/:recipeId`
+Removes a recipe from the authenticated user's favorites.
 
-**Failure Response:**
-
-  * **500 Internal Server Error:** Database or internal issue
-
-### 2\. `POST /:recipeId`
-
-Add a specific recipe to the user's favorites list.
-
-**Headers:**
-
-```
-Authorization: Bearer <JWT_TOKEN>
-```
-
-**Path Parameters:**
-
-  * `recipeId` — ID of the recipe to be added
-
-**Example:**
-
-```bash
-POST /api/favorites/5
-```
-
-**Success Response (201):**
-
-```json
-{
-  "message": "Recipe added to favorites"
-}
-```
-
-**Failure Response:**
-
-  * **500 Internal Server Error**
-
-### 3\. `DELETE /:recipeId`
-
-Remove a specific recipe from the user's favorites list.
-
-**Headers:**
-
-```
-Authorization: Bearer <JWT_TOKEN>
-```
-
-**Path Parameters:**
-
-  * `recipeId` — ID of the recipe to remove from favorites
-
-**Example:**
-
-```bash
-DELETE /api/favorites/5
-```
-
-**Success Response (200):**
-
-```json
-{
-  "message": "Recipe removed from favorites"
-}
-```
-
-**Failure Response:**
-
-  * **500 Internal Server Error**
-
------
-
-## Core Logic
-
-  * Only authenticated users can access favorites.
-  * Adding a duplicate favorite will be ignored (ON CONFLICT DO NOTHING).
-  * Favorites are fetched with full recipe details using a SQL JOIN.
-
------
-
-## SQL Overview
-
-| Action          | Query Summary                                 |
-| :-------------- | :-------------------------------------------- |
-| Get favorites   | JOIN favorites with recipes using `user_id`   |
-| Add favorite    | `INSERT INTO favorites (user_id, recipe_id)`  |
-| Remove favorite | `DELETE FROM favorites WHERE user_id = $1 AND recipe_id = $2` |
-
------
-
-## Testing Notes
-
-  * Ensure the user is logged in before calling any of these endpoints.
-  * Recipes that don’t exist will not trigger a database error but may result in no-operations.
-  * Use `/api/recipes` to verify recipe IDs beforehand.
-
------
-
-## Status
-
-Fully implemented, tested, and integrated with user profile and recipe modules.
+* **Description:** Removes a specified recipe from the user's favorites list. This action is **idempotent**; deleting a recipe that isn't a favorite will not cause an error.
+* **Path Parameters:**
+    * `recipeId`: `string` (UUID) - The unique identifier of the recipe to remove.
+* **Responses:**
+    * `200 OK`: Recipe successfully removed from favorites.
+    * `401 Unauthorized`: Token missing.
+    * `403 Forbidden`: Invalid or expired token.
+    * `500 Internal Server Error`: Failed to remove the recipe from favorites.

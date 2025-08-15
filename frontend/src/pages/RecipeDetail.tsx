@@ -150,7 +150,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
     });
   };
 
-  // Loading State UI
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -159,7 +158,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
     );
   }
 
-  // Error State UI
   if (error) {
     return (
       <div className="space-y-6 p-4">
@@ -178,7 +176,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
     );
   }
 
-  // No Recipe Found UI
   if (!recipe) {
     return (
       <div className="space-y-6 p-4">
@@ -197,7 +194,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
     );
   }
 
-  // Parse data for rendering
   const ingredientsForDisplay = recipe.ingredients
     ? recipe.ingredients.split(',').map(item => item.trim())
     : [];
@@ -212,8 +208,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
 
   return (
     <div className="space-y-6 p-4">
-
-      {/* Navigation & Action Buttons */}
       <div className="flex items-center justify-between">
         <Link to="/dashboard">
           <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white">
@@ -243,7 +237,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
         </div>
       </div>
 
-      {/* Recipe Header with Image and Metadata */}
       <Card className="bg-[#2c2f3d] border-gray-700">
         <div className="relative">
           <img
@@ -269,9 +262,7 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
         </div>
       </Card>
 
-      {/* Recipe Details Grid */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Left Column - Time & Location Info */}
         <div className="space-y-6">
           <Card className="bg-[#2c2f3d] border-gray-700">
             <CardHeader>
@@ -285,16 +276,15 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
             </CardContent>
           </Card>
 
-          {/* Cooking Mode Toggle */}
           <Button
             onClick={() => setShowCookingMode(!showCookingMode)}
+            disabled={!recipe} // FIX: Disable button if recipe data is not loaded
             className="w-full bg-orange-500 hover:bg-orange-600 text-lg py-3"
           >
             {showCookingMode ? "Hide Cooking Mode" : "🍳 Start Cooking"}
           </Button>
         </div>
 
-        {/* Right Column - Ingredients List */}
         <Card className="bg-[#2c2f3d] border-gray-700">
           <CardHeader>
             <CardTitle className="text-white text-lg">Ingredients</CardTitle>
@@ -312,17 +302,17 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
         </Card>
       </div>
 
-      {/* Cooking Mode UI */}
       {showCookingMode && (
         <CookingBox
           steps={stepsForDisplay}
           totalCookTime={cookTimeNum}
           title={recipe.name}
           onExit={() => setShowCookingMode(false)}
+          recipeId={recipe.id}
+          difficulty={recipe.difficulty}
         />
       )}
 
-      {/* Cooking Steps */}
       <Card className="bg-[#2c2f3d] border-gray-700">
         <CardHeader>
           <CardTitle className="text-white text-lg">Cooking Steps</CardTitle>
@@ -341,7 +331,6 @@ Prep: ${recipe.prep_time} min | Cook: ${recipe.cook_time} min
   );
 };
 
-// Helper component to render rows in the recipe info card
 const InfoRow = ({ icon, label, value }: { icon: JSX.Element; label: string; value: string }) => (
   <div className="flex items-center justify-between">
     <div className="flex items-center space-x-2 text-gray-300">

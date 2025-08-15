@@ -1,14 +1,14 @@
 const {
-  getAllRecipes,
-  getRecipeById,
-  searchRecipesByName,
-  filterRecipes
+  getAllRecipesWithStatus,
+  getRecipeByIdWithStatus,
+  searchRecipesByNameWithStatus,
+  filterRecipesWithStatus
 } = require("../models/recipeModel");
 
-// Fetch all recipes
+// Fetch all recipes with user's saved status
 exports.getAllRecipes = async (req, res) => {
   try {
-    const recipes = await getAllRecipes();
+    const recipes = await getAllRecipesWithStatus(req.user.id);
     res.status(200).json({ recipes });
   } catch (err) {
     console.error("[RecipesController] Error getting all recipes:", err);
@@ -16,10 +16,10 @@ exports.getAllRecipes = async (req, res) => {
   }
 };
 
-// Fetch a recipe by its ID
+// Fetch a single recipe by ID with user's saved status
 exports.getRecipeById = async (req, res) => {
   try {
-    const recipe = await getRecipeById(req.params.id);
+    const recipe = await getRecipeByIdWithStatus(req.params.id, req.user.id);
     if (!recipe) return res.status(404).json({ message: "Recipe not found" });
     res.status(200).json({ recipe });
   } catch (err) {
@@ -28,10 +28,10 @@ exports.getRecipeById = async (req, res) => {
   }
 };
 
-// Search recipes by name using query string
+// Search recipes by name with user-specific status
 exports.searchRecipes = async (req, res) => {
   try {
-    const recipes = await searchRecipesByName(req.query.q);
+    const recipes = await searchRecipesByNameWithStatus(req.query.q, req.user.id);
     res.status(200).json({ recipes });
   } catch (err) {
     console.error(`[RecipesController] Error searching recipes with query "${req.query.q}":`, err);
@@ -39,10 +39,10 @@ exports.searchRecipes = async (req, res) => {
   }
 };
 
-// Filter recipes using multiple optional query parameters
+// Filter recipes based on query parameters with user's saved status
 exports.filterRecipes = async (req, res) => {
   try {
-    const recipes = await filterRecipes(req.query);
+    const recipes = await filterRecipesWithStatus(req.query, req.user.id);
     res.status(200).json({ recipes });
   } catch (err) {
     console.error("[RecipesController] Error filtering recipes:", err);

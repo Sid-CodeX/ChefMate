@@ -1,4 +1,3 @@
-// Core imports
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { Heart } from 'lucide-react';
 import RecipeCard from '@/components/RecipeCard';
@@ -8,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Recipe } from '@/types/recipe';
 import { favoritesService } from '@/services/favoritesService';
 
-// Fallback image for missing recipe images
 const FALLBACK_IMAGE_URL = '/placeholder.svg';
 
 /**
@@ -203,7 +201,6 @@ export const Favorites = () => {
                   cookTime: `${parseInt(recipe.cook_time)} mins`,
                   difficulty: recipe.difficulty,
                   tags: [recipe.flavor_profile, recipe.course].filter(Boolean) as string[],
-                  rating: 4.5,
                   description: ingredientsArray.join(', '),
                   course: recipe.course,
                   flavorProfile: recipe.flavor_profile,

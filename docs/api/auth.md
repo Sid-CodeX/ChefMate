@@ -4,8 +4,6 @@ This module handles all user-related functionality, including registration, auth
 
 The base path for all authentication endpoints is `/api/auth`.
 
-\<br\>
-
 -----
 
 ### Endpoints

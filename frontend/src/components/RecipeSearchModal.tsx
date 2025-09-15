@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useQuery } from '@tanstack/react-query';
 import { recipeService } from '@/services/recipeService';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RecipeForSelection {
     id: number;
@@ -42,6 +43,7 @@ const RECIPES_PER_PAGE = 6;
 
 const RecipeSearchModal: React.FC<RecipeSearchModalProps> = ({ isOpen, onClose, onSelectRecipe }) => {
     const { toast } = useToast();
+    const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
     const [currentPage, setCurrentPage] = useState(1);
@@ -49,12 +51,12 @@ const RecipeSearchModal: React.FC<RecipeSearchModalProps> = ({ isOpen, onClose, 
     const { data: recipes, isLoading, isError, error } = useQuery<Recipe[], Error>({
         queryKey: ['searchRecipes', debouncedSearchQuery],
         queryFn: async () => {
-            if (debouncedSearchQuery) {
-                return recipeService.searchRecipes(debouncedSearchQuery);
+             if (debouncedSearchQuery && user?.token) { 
+                return recipeService.searchRecipes(debouncedSearchQuery, user.token); 
             }
             return Promise.resolve([]);
         },
-        enabled: isOpen && debouncedSearchQuery.length > 0,
+        enabled: isOpen && debouncedSearchQuery.length > 0 && !!user?.token, 
         staleTime: 5 * 60 * 1000,
     });
 
